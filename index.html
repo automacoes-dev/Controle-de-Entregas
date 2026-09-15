@@ -18,8 +18,26 @@
 
 <!-- ======================= AVISO: ARQUIVO ABERTO LOCALMENTE ======================= -->
 <div id="avisoFileProtocol" class="file-warning" hidden>
-  ⚠️ Você abriu este arquivo direto do aparelho (sem estar hospedado num link). Alguns recursos — como salvar os dados de forma confiável e instalar como aplicativo — só funcionam 100% quando o site está publicado num endereço https://. Veja o arquivo <strong>README.md</strong> para o passo a passo (é rápido e gratuito).
+  ⚠️ Você abriu este arquivo direto do aparelho (sem estar hospedado num link). O login com Google e o salvamento na nuvem só funcionam quando o site está publicado num endereço https://. Veja o arquivo <strong>README.md</strong> para o passo a passo (é rápido e gratuito).
 </div>
+
+<!-- ======================= TELA DE LOGIN ======================= -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <span class="brand-mark brand-mark-lg" aria-hidden="true"></span>
+    <h1 class="login-title">Rota Certa</h1>
+    <p class="login-subtitle">Controle de entregas e recebimentos por quinzena.</p>
+    <button id="btnLoginGoogle" class="btn-google">
+      <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.5 35.1 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.9 39.8 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.1 5.7l6.5 5.5C41.5 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+      Entrar com o Google
+    </button>
+    <p class="login-hint" id="loginError"></p>
+    <p class="login-privacy">Seus lançamentos ficam vinculados à sua conta Google — outras pessoas que usarem este mesmo link, com outra conta, não conseguem ver os seus dados.</p>
+  </div>
+</div>
+
+<!-- ======================= APLICATIVO (só aparece após login) ======================= -->
+<div id="appShell" hidden>
 
 <!-- ======================= CABEÇALHO ======================= -->
 <header class="app-header">
@@ -287,7 +305,7 @@
 
     <div class="config-block">
       <h3>Backup</h3>
-      <p>Salve todos os seus lançamentos em um arquivo JSON, ou restaure a partir de um backup anterior. Recomendado periodicamente, já que os dados ficam salvos apenas neste aparelho.</p>
+      <p>Salve todos os seus lançamentos em um arquivo JSON, ou restaure a partir de um backup anterior. Seus dados já ficam guardados na nuvem (na sua conta), mas um backup extra nunca faz mal.</p>
       <div class="config-actions">
         <button class="btn-secondary" id="btnExportBackup">Exportar backup (JSON)</button>
         <label class="btn-secondary file-label">
@@ -299,15 +317,29 @@
 
     <div class="config-block config-block-danger">
       <h3>Apagar todos os dados</h3>
-      <p>Remove permanentemente todas as entregas salvas neste aparelho. Faça um backup antes.</p>
+      <p>Remove permanentemente todas as entregas salvas na sua conta. Faça um backup antes.</p>
       <div class="config-actions">
         <button class="btn-danger" id="btnApagarTudo">Apagar tudo</button>
       </div>
     </div>
 
     <div class="config-block">
+      <h3>Conta</h3>
+      <div class="account-row">
+        <img id="contaAvatar" class="conta-avatar" alt="">
+        <div>
+          <div id="contaNome" class="conta-nome">—</div>
+          <div id="contaEmail" class="conta-email">—</div>
+        </div>
+      </div>
+      <div class="config-actions">
+        <button class="btn-secondary" id="btnLogout">Sair da conta</button>
+      </div>
+    </div>
+
+    <div class="config-block">
       <h3>Sobre</h3>
-      <p>Rota Certa funciona 100% neste aparelho, sem login e sem internet. Instale na tela inicial para usar como aplicativo.</p>
+      <p>Rota Certa. Seus dados ficam vinculados à sua conta Google — cada pessoa enxerga só os próprios lançamentos.</p>
       <p class="config-storage-info" id="storageInfo"></p>
     </div>
   </section>
@@ -336,6 +368,8 @@
 <!-- Botão flutuante de nova entrega (mobile) -->
 <button id="fabNova" class="fab" aria-label="Nova entrega">+</button>
 
+</div><!-- /#appShell -->
+
 <!-- ======================= MODAL DE CONFIRMAÇÃO ======================= -->
 <div id="modalOverlay" class="modal-overlay" hidden>
   <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -351,6 +385,11 @@
 <!-- ======================= TOAST ======================= -->
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- Firebase (autenticação com Google + banco de dados por usuário) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
