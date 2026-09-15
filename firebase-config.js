@@ -10,12 +10,12 @@
    ========================================================================== */
 
 const firebaseConfig = {
-  apiKey: "COLE_AQUI_SUA_API_KEY",
-  authDomain: "COLE_AQUI_SEU_PROJETO.firebaseapp.com",
-  projectId: "COLE_AQUI_SEU_PROJECT_ID",
-  storageBucket: "COLE_AQUI_SEU_PROJETO.appspot.com",
-  messagingSenderId: "COLE_AQUI_SEU_SENDER_ID",
-  appId: "COLE_AQUI_SEU_APP_ID",
+  apiKey: "AIzaSyC8DizbaPkfD3iGn3bfzOnLoFYTuYltwsA",
+  authDomain: "entregas-b8cca.firebaseapp.com",
+  projectId: "entregas-b8cca",
+  storageBucket: "entregas-b8cca.firebasestorage.app",
+  messagingSenderId: "443270533251",
+  appId: "1:443270533251:web:d2245e9a44e77b88050bb6",
 };
 
 firebase.initializeApp(firebaseConfig);
