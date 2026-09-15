@@ -1,53 +1,35 @@
 /* ==========================================================================
    ROTA CERTA — lógica da aplicação
    Controle de entregas e recebimentos para caminhoneiros.
-   100% local (localStorage), sem login, sem serviços externos.
+   Login com conta Google + dados salvos no Firestore, isolados por usuário.
+   Funciona offline graças ao cache automático do Firestore (ver
+   firebase-config.js), sincronizando sozinho quando a internet volta.
    ========================================================================== */
 
 (function () {
   "use strict";
 
   /* ------------------------------------------------------------------ *
-   * 1. CAMADA DE ARMAZENAMENTO
-   *    Isolada em um único objeto para que, futuramente, "localStorage"
-   *    possa ser trocado por chamadas a uma API/banco de dados real sem
-   *    alterar o restante do código (basta reescrever os métodos abaixo).
+   * 1. AUTENTICAÇÃO E CAMADA DE ARMAZENAMENTO (Firebase)
+   *    Toda leitura/escrita de entregas passa pelas funções abaixo, que
+   *    conversam com o Firestore filtrando sempre pelo usuário logado.
+   *    Cada documento da coleção "entregas" tem um campo "uid" — as regras
+   *    de segurança do Firestore garantem que um usuário nunca leia ou
+   *    altere documentos com "uid" de outra pessoa.
    * ------------------------------------------------------------------ */
 
-  const DB = {
-    KEY: "rotacerta:v1",
+  const auth = window.rotaCertaAuth;
+  const db = window.rotaCertaDb;
+  const COLECAO = "entregas";
+  const LEGACY_KEY = "rotacerta:v1"; // chave usada pela versão antiga (só localStorage)
 
-    /** Lê todos os lançamentos salvos. Retorna sempre um array. */
-    load() {
-      try {
-        const raw = localStorage.getItem(this.KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed.filter(isEntregaValida);
-      } catch (e) {
-        console.error("Falha ao ler dados salvos:", e);
-        return [];
-      }
-    },
-
-    /** Substitui todos os lançamentos salvos. */
-    saveAll(entregas) {
-      try {
-        localStorage.setItem(this.KEY, JSON.stringify(entregas));
-        return true;
-      } catch (e) {
-        console.error("Falha ao salvar dados:", e);
-        showToast("Não foi possível salvar. Armazenamento cheio?");
-        return false;
-      }
-    },
-  };
+  let currentUser = null;
+  let unsubscribeSnapshot = null;
+  let uiEstaticaPronta = false;
 
   function isEntregaValida(o) {
     return (
       o &&
-      typeof o.id === "string" &&
       typeof o.data === "string" &&
       /^\d{4}-\d{2}-\d{2}$/.test(o.data) &&
       typeof o.bruto === "number" &&
@@ -56,16 +38,121 @@
     );
   }
 
-  function uid() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+  /** Converte um documento do Firestore no formato usado pelo app. */
+  function docParaEntrega(doc) {
+    const d = doc.data();
+    return {
+      id: doc.id,
+      data: d.data,
+      bruto: d.bruto,
+      percentual: d.percentual,
+      liquido: d.liquido,
+    };
   }
 
-  /* Estado em memória — sempre espelha o que está no localStorage. */
-  let entregas = DB.load();
+  /* Estado em memória — sempre espelha o que está no Firestore para o
+     usuário atual (atualizado em tempo real pelo listener onSnapshot). */
+  let entregas = [];
 
-  function persist() {
-    DB.saveAll(entregas);
+  function dbAdicionar(dados) {
+    return db.collection(COLECAO).add({
+      ...dados,
+      uid: currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  function dbAtualizar(id, dados) {
+    return db.collection(COLECAO).doc(id).update(dados);
+  }
+
+  function dbExcluir(id) {
+    return db.collection(COLECAO).doc(id).delete();
+  }
+
+  function dbExcluirVarios(lista) {
+    if (!lista.length) return Promise.resolve();
+    const batch = db.batch();
+    lista.forEach((e) => batch.delete(db.collection(COLECAO).doc(e.id)));
+    return batch.commit();
+  }
+
+  /** Substitui todos os lançamentos do usuário pelos da lista informada. */
+  function dbImportarLista(lista) {
+    return dbExcluirVarios(entregas).then(() => {
+      if (!lista.length) return;
+      const batch = db.batch();
+      lista.forEach((e) => {
+        const ref = db.collection(COLECAO).doc();
+        batch.set(ref, {
+          data: e.data,
+          bruto: e.bruto,
+          percentual: e.percentual,
+          liquido: e.liquido,
+          uid: currentUser.uid,
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      return batch.commit();
+    });
+  }
+
+  /** Grava vários lançamentos novos de uma vez (usado na migração local → nuvem). */
+  function dbAdicionarVarios(lista) {
+    if (!lista.length) return Promise.resolve();
+    const batch = db.batch();
+    lista.forEach((e) => {
+      const ref = db.collection(COLECAO).doc();
+      batch.set(ref, {
+        data: e.data,
+        bruto: e.bruto,
+        percentual: e.percentual,
+        liquido: e.liquido,
+        uid: currentUser.uid,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    return batch.commit();
+  }
+
+  /** Verifica se existem dados de uma versão antiga (só localStorage, sem
+   *  login) neste aparelho e, se houver, oferece importar para a conta que
+   *  acabou de logar. Os dados locais nunca são apagados por esta função —
+   *  só marcamos que já perguntamos, para não repetir a cada login. */
+  function verificarMigracaoLocal(user) {
+    const marcador = `rotacerta:migrado:${user.uid}`;
+    if (localStorage.getItem(marcador)) return;
+
+    let dadosLocais = [];
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) dadosLocais = parsed.filter(isEntregaValida);
+      }
+    } catch (e) {
+      console.warn("Não foi possível ler dados locais antigos:", e);
+    }
+
+    if (!dadosLocais.length) {
+      localStorage.setItem(marcador, "1");
+      return;
+    }
+
+    abrirModal({
+      titulo: "Importar dados deste aparelho?",
+      corpo: `Encontramos ${dadosLocais.length} entrega(s) salvas neste aparelho (de antes do login). Deseja importar para a sua conta (${user.email})? Nada será apagado deste aparelho.`,
+      textoConfirmar: "Importar agora",
+    }).then((ok) => {
+      localStorage.setItem(marcador, "1");
+      if (!ok) return;
+      dbAdicionarVarios(dadosLocais)
+        .then(() => showToast("Dados importados com sucesso."))
+        .catch((err) => {
+          console.error("Falha ao importar dados locais:", err);
+          showToast("Não foi possível importar os dados locais.");
+        });
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -518,22 +605,25 @@
     if (isNaN(liquido) || liquido < 0) return showToast("Valor líquido inválido.");
 
     const idExistente = campoId.value;
+    const dados = { data: iso, bruto, percentual, liquido };
+    const btn = el("btnSalvarEntrega");
+    btn.disabled = true;
 
-    if (idExistente) {
-      const idx = entregas.findIndex((e) => e.id === idExistente);
-      if (idx >= 0) {
-        entregas[idx] = { ...entregas[idx], data: iso, bruto, percentual, liquido };
-        showToast("Entrega atualizada.");
-      }
-    } else {
-      entregas.push({ id: uid(), data: iso, bruto, percentual, liquido, criadoEm: Date.now() });
-      showToast("Entrega registrada.");
-    }
+    const operacao = idExistente ? dbAtualizar(idExistente, dados) : dbAdicionar(dados);
 
-    persist();
-    prepararFormularioNovo();
-    renderTudo();
-    irPara("entregas");
+    operacao
+      .then(() => {
+        showToast(idExistente ? "Entrega atualizada." : "Entrega registrada.");
+        prepararFormularioNovo();
+        irPara("entregas");
+      })
+      .catch((err) => {
+        console.error("Falha ao salvar entrega:", err);
+        showToast("Não foi possível salvar. Verifique sua conexão.");
+      })
+      .finally(() => {
+        btn.disabled = false;
+      });
   });
 
   /* ------------------------------------------------------------------ *
@@ -630,11 +720,12 @@
       textoConfirmar: "Excluir",
     }).then((confirmado) => {
       if (!confirmado) return;
-      entregas = entregas.filter((e) => e.id !== id);
-      persist();
-      renderTudo();
-      renderEntregas();
-      showToast("Entrega excluída.");
+      dbExcluir(id)
+        .then(() => showToast("Entrega excluída."))
+        .catch((err) => {
+          console.error("Falha ao excluir entrega:", err);
+          showToast("Não foi possível excluir. Verifique sua conexão.");
+        });
     });
   }
 
@@ -700,10 +791,13 @@
    * ------------------------------------------------------------------ */
 
   function renderConfig() {
-    const bytes = new Blob([JSON.stringify(entregas)]).size;
-    const kb = bytes / 1024;
     el("storageInfo").textContent =
-      `${entregas.length} entrega${entregas.length === 1 ? "" : "s"} salva${entregas.length === 1 ? "" : "s"} neste aparelho · ~${kb < 1 ? "menos de 1" : kb.toFixed(0)} KB usados.`;
+      `${entregas.length} entrega${entregas.length === 1 ? "" : "s"} sincronizada${entregas.length === 1 ? "" : "s"} na sua conta.`;
+    if (currentUser) {
+      el("contaNome").textContent = currentUser.displayName || "";
+      el("contaEmail").textContent = currentUser.email || "";
+      el("contaAvatar").src = currentUser.photoURL || "";
+    }
   }
 
   function baixarArquivo(nome, conteudo, tipo) {
@@ -787,14 +881,16 @@
       }
       abrirModal({
         titulo: "Importar backup?",
-        corpo: `Este arquivo contém ${lista.length} entrega(s). Importar irá SUBSTITUIR todos os dados salvos atualmente neste aparelho. Deseja continuar?`,
+        corpo: `Este arquivo contém ${lista.length} entrega(s). Importar irá SUBSTITUIR todos os dados salvos atualmente na sua conta (${currentUser ? currentUser.email : ""}). Deseja continuar?`,
         textoConfirmar: "Substituir dados",
       }).then((ok) => {
         if (!ok) return;
-        entregas = lista;
-        persist();
-        renderTudo();
-        showToast("Backup importado com sucesso.");
+        dbImportarLista(lista)
+          .then(() => showToast("Backup importado com sucesso."))
+          .catch((err) => {
+            console.error("Falha ao importar backup:", err);
+            showToast("Não foi possível importar o backup. Verifique sua conexão.");
+          });
       });
     };
     reader.readAsText(arquivo);
@@ -805,15 +901,21 @@
     if (!entregas.length) return showToast("Não há dados para apagar.");
     abrirModal({
       titulo: "Apagar todos os dados?",
-      corpo: "Isso removerá permanentemente todas as entregas salvas neste aparelho. Essa ação não pode ser desfeita. Recomendamos exportar um backup antes.",
+      corpo: "Isso removerá permanentemente todas as entregas salvas na sua conta. Essa ação não pode ser desfeita. Recomendamos exportar um backup antes.",
       textoConfirmar: "Apagar tudo",
     }).then((ok) => {
       if (!ok) return;
-      entregas = [];
-      persist();
-      renderTudo();
-      showToast("Todos os dados foram apagados.");
+      dbExcluirVarios(entregas)
+        .then(() => showToast("Todos os dados foram apagados."))
+        .catch((err) => {
+          console.error("Falha ao apagar dados:", err);
+          showToast("Não foi possível apagar. Verifique sua conexão.");
+        });
     });
+  });
+
+  el("btnLogout").addEventListener("click", () => {
+    auth.signOut();
   });
 
   /* ------------------------------------------------------------------ *
@@ -875,20 +977,21 @@
     if (!el("view-config").hidden) renderConfig();
   }
 
-  function iniciar() {
+  /** Coisas que só precisam acontecer uma vez, independente de login. */
+  function iniciarUIEstatica() {
+    if (uiEstaticaPronta) return;
+    uiEstaticaPronta = true;
+
     // Se o arquivo foi aberto direto do aparelho (file://) em vez de um
-    // endereço hospedado (http/https), avisa o usuário: localStorage,
-    // Service Worker e "Adicionar à Tela de Início" não são confiáveis
-    // nesse modo em muitos navegadores (especialmente no iPhone).
+    // endereço hospedado (http/https), avisa o usuário: login com Google,
+    // Service Worker e "Adicionar à Tela de Início" não funcionam nesse
+    // modo em muitos navegadores (especialmente no iPhone).
     if (location.protocol === "file:") {
       const aviso = el("avisoFileProtocol");
       if (aviso) aviso.hidden = false;
     }
 
-    popularSelectsDeAno();
-    sincronizarFiltrosUI();
     prepararFormularioNovo();
-    renderDashboard();
 
     // Recalcula os gráficos ao redimensionar (ex.: girar o celular).
     let resizeTimer = null;
@@ -900,10 +1003,67 @@
     });
   }
 
-  iniciar();
+  /* ------------------------------------------------------------------ *
+   * 16. LOGIN COM GOOGLE
+   *    Enquanto não há usuário logado, a tela de login fica visível e o
+   *    restante do app (#appShell) permanece escondido. Assim que o
+   *    Firebase confirma o login, passamos a ouvir só os lançamentos
+   *    daquele usuário (query filtrando por uid) em tempo real.
+   * ------------------------------------------------------------------ */
+
+  document.getElementById("btnLoginGoogle").addEventListener("click", () => {
+    const erroEl = document.getElementById("loginError");
+    erroEl.textContent = "";
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch((err) => {
+      console.error("Falha no login:", err);
+      if (err.code === "auth/popup-blocked" || err.code === "auth/cancelled-popup-request") {
+        auth.signInWithRedirect(provider);
+      } else if (err.code !== "auth/popup-closed-by-user") {
+        erroEl.textContent = "Não foi possível entrar. Tente novamente.";
+      }
+    });
+  });
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("loginScreen").hidden = true;
+      document.getElementById("appShell").hidden = false;
+
+      iniciarUIEstatica();
+      renderDashboard();
+
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      unsubscribeSnapshot = db
+        .collection(COLECAO)
+        .where("uid", "==", user.uid)
+        .onSnapshot(
+          (snap) => {
+            entregas = snap.docs.map(docParaEntrega);
+            renderTudo();
+          },
+          (err) => {
+            console.error("Erro ao sincronizar dados:", err);
+            showToast("Não foi possível sincronizar seus dados agora.");
+          }
+        );
+
+      verificarMigracaoLocal(user);
+    } else {
+      currentUser = null;
+      entregas = [];
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+      document.getElementById("appShell").hidden = true;
+      document.getElementById("loginScreen").hidden = false;
+    }
+  });
 
   /* ------------------------------------------------------------------ *
-   * 16. PWA — REGISTRO DO SERVICE WORKER (uso offline)
+   * 17. PWA — REGISTRO DO SERVICE WORKER (uso offline)
    * ------------------------------------------------------------------ */
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
