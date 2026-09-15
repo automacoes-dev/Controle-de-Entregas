@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rota Certa · Controle de Entregas</title>
+<meta name="description" content="Controle de entregas e recebimentos para caminhoneiros">
+<meta name="theme-color" content="#0F1721">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ======================= AVISO: ARQUIVO ABERTO LOCALMENTE ======================= -->
+<div id="avisoFileProtocol" class="file-warning" hidden>
+  ⚠️ Você abriu este arquivo direto do aparelho (sem estar hospedado num link). Alguns recursos — como salvar os dados de forma confiável e instalar como aplicativo — só funcionam 100% quando o site está publicado num endereço https://. Veja o arquivo <strong>README.md</strong> para o passo a passo (é rápido e gratuito).
+</div>
+
+<!-- ======================= CABEÇALHO ======================= -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Rota Certa</span>
+    </div>
+    <div id="periodoAtual" class="header-period">SETEMBRO/2026</div>
+  </div>
+</header>
+
+<!-- ======================= CONTEÚDO ======================= -->
+<main id="app-main">
+
+  <!-- ---------- VIEW: DASHBOARD ---------- -->
+  <section id="view-dashboard" class="view" data-view="dashboard">
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="filtroAno">Ano</label>
+        <select id="filtroAno"></select>
+      </div>
+      <div class="filter-field">
+        <label for="filtroMes">Mês</label>
+        <select id="filtroMes">
+          <option value="todos">Todos</option>
+          <option value="0">Janeiro</option>
+          <option value="1">Fevereiro</option>
+          <option value="2">Março</option>
+          <option value="3">Abril</option>
+          <option value="4">Maio</option>
+          <option value="5">Junho</option>
+          <option value="6">Julho</option>
+          <option value="7">Agosto</option>
+          <option value="8">Setembro</option>
+          <option value="9">Outubro</option>
+          <option value="10">Novembro</option>
+          <option value="11">Dezembro</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filtroQuinzena">Quinzena</label>
+        <select id="filtroQuinzena">
+          <option value="todas">Todas</option>
+          <option value="1">1ª Quinzena</option>
+          <option value="2">2ª Quinzena</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cards principais -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-primary">
+        <span class="kpi-icon">💰</span>
+        <span class="kpi-label">Líquido previsto</span>
+        <span class="kpi-value" id="kpiLiquido">R$ 0,00</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">🚛</span>
+        <span class="kpi-label">Entregas</span>
+        <span class="kpi-value" id="kpiEntregas">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">📦</span>
+        <span class="kpi-label">Valor bruto</span>
+        <span class="kpi-value" id="kpiBruto">R$ 0,00</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">📊</span>
+        <span class="kpi-label">Percentual médio</span>
+        <span class="kpi-value" id="kpiPercentual">0%</span>
+      </div>
+    </div>
+
+    <!-- Resumo por quinzena -->
+    <h2 class="section-title">Resumo por quinzena</h2>
+    <div class="quinzena-grid">
+      <div class="quinzena-card">
+        <div class="quinzena-head">
+          <span class="quinzena-tag">1ª quinzena</span>
+          <span class="quinzena-range" id="q1Range">01 – 15</span>
+        </div>
+        <div class="quinzena-body">
+          <div class="quinzena-row"><span>Entregas</span><strong id="q1Count">0</strong></div>
+          <div class="quinzena-row"><span>Bruto</span><strong id="q1Bruto">R$ 0,00</strong></div>
+          <div class="quinzena-row quinzena-highlight"><span>Líquido previsto</span><strong id="q1Liquido">R$ 0,00</strong></div>
+        </div>
+      </div>
+      <div class="quinzena-card">
+        <div class="quinzena-head">
+          <span class="quinzena-tag">2ª quinzena</span>
+          <span class="quinzena-range" id="q2Range">16 – 30</span>
+        </div>
+        <div class="quinzena-body">
+          <div class="quinzena-row"><span>Entregas</span><strong id="q2Count">0</strong></div>
+          <div class="quinzena-row"><span>Bruto</span><strong id="q2Bruto">R$ 0,00</strong></div>
+          <div class="quinzena-row quinzena-highlight"><span>Líquido previsto</span><strong id="q2Liquido">R$ 0,00</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total do mês -->
+    <div class="total-strip">
+      <div class="total-item">
+        <span>Total de entregas</span>
+        <strong id="totalCount">0</strong>
+      </div>
+      <div class="total-item">
+        <span>Total bruto</span>
+        <strong id="totalBruto">R$ 0,00</strong>
+      </div>
+      <div class="total-item total-item-highlight">
+        <span>Total líquido previsto</span>
+        <strong id="totalLiquido">R$ 0,00</strong>
+      </div>
+      <div class="total-item">
+        <span>Média líquida / entrega</span>
+        <strong id="totalMedia">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <h2 class="section-title">Gráficos</h2>
+    <div class="chart-card">
+      <div class="chart-head">
+        <span>Líquido por dia</span>
+      </div>
+      <canvas id="chartDia" height="180"></canvas>
+      <p class="chart-empty" id="chartDiaEmpty">Sem lançamentos no período.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head">
+        <span>1ª quinzena × 2ª quinzena (líquido)</span>
+      </div>
+      <canvas id="chartQuinzena" height="140"></canvas>
+      <p class="chart-empty" id="chartQuinzenaEmpty">Sem lançamentos no período.</p>
+    </div>
+
+  </section>
+
+  <!-- ---------- VIEW: NOVA ENTREGA ---------- -->
+  <section id="view-nova" class="view" data-view="nova" hidden>
+    <h2 class="page-title" id="formTitle">Nova entrega</h2>
+    <form id="formEntrega" class="entrega-form">
+      <input type="hidden" id="entregaId" value="">
+
+      <div class="form-field">
+        <label for="campoData">Data da entrega</label>
+        <div class="data-row">
+          <input type="date" id="campoData" required>
+          <button type="button" id="btnHoje" class="btn-ghost">Hoje</button>
+        </div>
+        <span class="field-hint" id="quinzenaPreview"></span>
+      </div>
+
+      <div class="form-field">
+        <label for="campoBruto">Valor bruto / base (R$)</label>
+        <input type="text" inputmode="decimal" id="campoBruto" placeholder="0,00" required>
+      </div>
+
+      <div class="form-field">
+        <label for="campoPercentual">Percentual (%)</label>
+        <input type="text" inputmode="decimal" id="campoPercentual" placeholder="10" required>
+      </div>
+
+      <div class="form-field">
+        <label for="campoLiquido">
+          Valor líquido (R$)
+          <button type="button" id="btnCalcular" class="btn-link">calcular a partir do bruto × %</button>
+        </label>
+        <input type="text" inputmode="decimal" id="campoLiquido" placeholder="0,00" required>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="btnSalvarEntrega">Salvar entrega</button>
+        <button type="button" class="btn-secondary" id="btnCancelarEdicao" hidden>Cancelar edição</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ---------- VIEW: ENTREGAS ---------- -->
+  <section id="view-entregas" class="view" data-view="entregas" hidden>
+    <h2 class="page-title">Entregas do período</h2>
+
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label for="filtroAno2">Ano</label>
+        <select id="filtroAno2"></select>
+      </div>
+      <div class="filter-field">
+        <label for="filtroMes2">Mês</label>
+        <select id="filtroMes2">
+          <option value="todos">Todos</option>
+          <option value="0">Janeiro</option>
+          <option value="1">Fevereiro</option>
+          <option value="2">Março</option>
+          <option value="3">Abril</option>
+          <option value="4">Maio</option>
+          <option value="5">Junho</option>
+          <option value="6">Julho</option>
+          <option value="7">Agosto</option>
+          <option value="8">Setembro</option>
+          <option value="9">Outubro</option>
+          <option value="10">Novembro</option>
+          <option value="11">Dezembro</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filtroQuinzena2">Quinzena</label>
+        <select id="filtroQuinzena2">
+          <option value="todas">Todas</option>
+          <option value="1">1ª Quinzena</option>
+          <option value="2">2ª Quinzena</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="listaEntregasResumo" class="list-summary"></div>
+
+    <!-- Tabela (desktop) -->
+    <div class="table-wrap">
+      <table class="entregas-table" id="tabelaEntregas">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Quinzena</th>
+            <th>Bruto</th>
+            <th>%</th>
+            <th>Líquido</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaEntregasBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Cards (mobile) -->
+    <div class="entregas-cards" id="entregasCards"></div>
+
+    <p class="empty-state" id="entregasEmpty" hidden>Nenhuma entrega encontrada para este período. Toque em "Nova" para registrar a primeira.</p>
+  </section>
+
+  <!-- ---------- VIEW: HISTÓRICO ---------- -->
+  <section id="view-historico" class="view" data-view="historico" hidden>
+    <h2 class="page-title">Histórico de meses</h2>
+    <p class="page-subtitle">Toque em um mês para ver o resumo completo do período.</p>
+    <div id="historicoLista" class="historico-lista"></div>
+    <p class="empty-state" id="historicoEmpty" hidden>Nenhum lançamento cadastrado ainda.</p>
+  </section>
+
+  <!-- ---------- VIEW: CONFIGURAÇÕES ---------- -->
+  <section id="view-config" class="view" data-view="config" hidden>
+    <h2 class="page-title">Configurações</h2>
+
+    <div class="config-block">
+      <h3>Exportar dados</h3>
+      <p>Gere uma planilha (CSV) com data, quinzena, mês, ano, bruto, percentual e líquido.</p>
+      <div class="config-actions">
+        <button class="btn-secondary" id="btnExportCsvTudo">Exportar tudo (CSV)</button>
+        <button class="btn-secondary" id="btnExportCsvFiltro">Exportar período filtrado (CSV)</button>
+      </div>
+    </div>
+
+    <div class="config-block">
+      <h3>Backup</h3>
+      <p>Salve todos os seus lançamentos em um arquivo JSON, ou restaure a partir de um backup anterior. Recomendado periodicamente, já que os dados ficam salvos apenas neste aparelho.</p>
+      <div class="config-actions">
+        <button class="btn-secondary" id="btnExportBackup">Exportar backup (JSON)</button>
+        <label class="btn-secondary file-label">
+          Importar backup (JSON)
+          <input type="file" id="inputImportBackup" accept="application/json" hidden>
+        </label>
+      </div>
+    </div>
+
+    <div class="config-block config-block-danger">
+      <h3>Apagar todos os dados</h3>
+      <p>Remove permanentemente todas as entregas salvas neste aparelho. Faça um backup antes.</p>
+      <div class="config-actions">
+        <button class="btn-danger" id="btnApagarTudo">Apagar tudo</button>
+      </div>
+    </div>
+
+    <div class="config-block">
+      <h3>Sobre</h3>
+      <p>Rota Certa funciona 100% neste aparelho, sem login e sem internet. Instale na tela inicial para usar como aplicativo.</p>
+      <p class="config-storage-info" id="storageInfo"></p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ======================= NAVEGAÇÃO INFERIOR ======================= -->
+<nav class="bottom-nav" aria-label="Navegação principal">
+  <button class="nav-btn is-active" data-target="dashboard">
+    <span class="nav-icon">📊</span><span>Painel</span>
+  </button>
+  <button class="nav-btn" data-target="nova">
+    <span class="nav-icon">➕</span><span>Nova</span>
+  </button>
+  <button class="nav-btn" data-target="entregas">
+    <span class="nav-icon">🚚</span><span>Entregas</span>
+  </button>
+  <button class="nav-btn" data-target="historico">
+    <span class="nav-icon">🗓️</span><span>Histórico</span>
+  </button>
+  <button class="nav-btn" data-target="config">
+    <span class="nav-icon">⚙️</span><span>Ajustes</span>
+  </button>
+</nav>
+
+<!-- Botão flutuante de nova entrega (mobile) -->
+<button id="fabNova" class="fab" aria-label="Nova entrega">+</button>
+
+<!-- ======================= MODAL DE CONFIRMAÇÃO ======================= -->
+<div id="modalOverlay" class="modal-overlay" hidden>
+  <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle">
+    <p id="modalTitle" class="modal-title">Tem certeza?</p>
+    <p id="modalBody" class="modal-body"></p>
+    <div class="modal-actions">
+      <button id="modalCancel" class="btn-secondary">Cancelar</button>
+      <button id="modalConfirm" class="btn-danger">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= TOAST ======================= -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
