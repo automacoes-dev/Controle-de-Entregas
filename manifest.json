@@ -1,7 +1,7 @@
 {
-  "name": "Rota Certa — Controle de Entregas",
-  "short_name": "Rota Certa",
-  "description": "Controle de entregas e recebimentos por quinzena para caminhoneiros.",
+  "name": "Frete na Mão — Controle de Entregas",
+  "short_name": "Frete na Mão",
+  "description": "Controle de entregas e recebimentos.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
