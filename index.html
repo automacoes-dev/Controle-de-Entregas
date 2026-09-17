@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Rota Certa · Controle de Entregas</title>
+<title>Frete na Mão · Controle de Entregas</title>
 <meta name="description" content="Controle de entregas e recebimentos para caminhoneiros">
 <meta name="theme-color" content="#0F1721">
 <link rel="manifest" href="manifest.json">
@@ -25,7 +25,7 @@
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
     <span class="brand-mark brand-mark-lg" aria-hidden="true"></span>
-    <h1 class="login-title">Rota Certa</h1>
+    <h1 class="login-title">Frete na Mão</h1>
     <p class="login-subtitle">Controle de entregas e recebimentos por quinzena.</p>
     <button id="btnLoginGoogle" class="btn-google">
       <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.5 35.1 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.9 39.8 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.1 5.7l6.5 5.5C41.5 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
@@ -44,8 +44,28 @@
   <div class="header-inner">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-name">Rota Certa</span>
+      <span class="brand-name">Frete na Mão</span>
     </div>
+
+    <!-- Navegação de desktop (a de celular fica no rodapé, mais abaixo) -->
+    <nav class="desktop-nav" aria-label="Navegação principal">
+      <button class="nav-btn is-active" data-target="dashboard">
+        <span class="nav-icon">📊</span><span>Painel</span>
+      </button>
+      <button class="nav-btn" data-target="nova">
+        <span class="nav-icon">➕</span><span>Nova</span>
+      </button>
+      <button class="nav-btn" data-target="entregas">
+        <span class="nav-icon">🚚</span><span>Entregas</span>
+      </button>
+      <button class="nav-btn" data-target="historico">
+        <span class="nav-icon">🗓️</span><span>Histórico</span>
+      </button>
+      <button class="nav-btn" data-target="config">
+        <span class="nav-icon">⚙️</span><span>Ajustes</span>
+      </button>
+    </nav>
+
     <div id="periodoAtual" class="header-period">SETEMBRO/2026</div>
   </div>
 </header>
@@ -88,6 +108,12 @@
           <option value="2">2ª Quinzena</option>
         </select>
       </div>
+      <div class="filter-field">
+        <label for="filtroCidade">Cidade</label>
+        <select id="filtroCidade">
+          <option value="todas">Todas</option>
+        </select>
+      </div>
     </div>
 
     <!-- Cards principais -->
@@ -111,6 +137,16 @@
         <span class="kpi-icon">📊</span>
         <span class="kpi-label">Percentual médio</span>
         <span class="kpi-value" id="kpiPercentual">0%</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">⛽</span>
+        <span class="kpi-label">Gastos da viagem</span>
+        <span class="kpi-value" id="kpiGastos">R$ 0,00</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon">🏁</span>
+        <span class="kpi-label">Líquido após gastos</span>
+        <span class="kpi-value" id="kpiLiquidoAposGastos">R$ 0,00</span>
       </div>
     </div>
 
@@ -156,9 +192,29 @@
         <strong id="totalLiquido">R$ 0,00</strong>
       </div>
       <div class="total-item">
+        <span>Total de gastos</span>
+        <strong id="totalGastos">R$ 0,00</strong>
+      </div>
+      <div class="total-item total-item-highlight">
+        <span>Líquido após gastos</span>
+        <strong id="totalLiquidoAposGastos">R$ 0,00</strong>
+      </div>
+      <div class="total-item">
         <span>Média líquida / entrega</span>
         <strong id="totalMedia">R$ 0,00</strong>
       </div>
+    </div>
+
+    <!-- Detalhamento de gastos -->
+    <h2 class="section-title">Detalhamento de gastos</h2>
+    <div class="gastos-grid">
+      <div class="gasto-item"><span>⛽ Diesel</span><strong id="gastoDiesel">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🛣️ Pedágio</span><strong id="gastoPedagio">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🍽️ Alimentação</span><strong id="gastoAlimentacao">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🅿️ Estacionamento</span><strong id="gastoEstacionamento">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>📎 Outros</span><strong id="gastoOutros">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🧑‍🤝‍🧑 Ajudante</span><strong id="gastoAjudante">R$ 0,00</strong></div>
+      <div class="gasto-item gasto-item-destaque"><span>Total de gastos</span><strong id="gastoTotalDetalhe">R$ 0,00</strong></div>
     </div>
 
     <!-- Gráficos -->
@@ -196,6 +252,12 @@
       </div>
 
       <div class="form-field">
+        <label for="campoCidade">Cidade da entrega</label>
+        <input type="text" id="campoCidade" placeholder="Ex.: Araguari" list="listaCidadesConhecidas" autocomplete="off">
+        <datalist id="listaCidadesConhecidas"></datalist>
+      </div>
+
+      <div class="form-field">
         <label for="campoBruto">Valor bruto / base (R$)</label>
         <input type="text" inputmode="decimal" id="campoBruto" placeholder="0,00" required>
       </div>
@@ -211,6 +273,49 @@
           <button type="button" id="btnCalcular" class="btn-link">calcular a partir do bruto × %</button>
         </label>
         <input type="text" inputmode="decimal" id="campoLiquido" placeholder="0,00" required>
+      </div>
+
+      <h3 class="form-section-title">Gastos da viagem (opcional)</h3>
+
+      <div class="form-field">
+        <label for="campoDiesel">Diesel (R$)</label>
+        <input type="text" inputmode="decimal" id="campoDiesel" placeholder="0,00">
+      </div>
+
+      <div class="form-field">
+        <label for="campoPedagio">Pedágio (R$)</label>
+        <input type="text" inputmode="decimal" id="campoPedagio" placeholder="0,00">
+      </div>
+
+      <div class="form-field">
+        <label for="campoAlimentacao">Alimentação (R$)</label>
+        <input type="text" inputmode="decimal" id="campoAlimentacao" placeholder="0,00">
+      </div>
+
+      <div class="form-field">
+        <label for="campoEstacionamento">Estacionamento (R$)</label>
+        <input type="text" inputmode="decimal" id="campoEstacionamento" placeholder="0,00">
+      </div>
+
+      <div class="form-field">
+        <label for="campoOutrosGastos">Outros gastos (R$)</label>
+        <input type="text" inputmode="decimal" id="campoOutrosGastos" placeholder="0,00">
+      </div>
+
+      <div class="form-field">
+        <label for="campoAjudante">Ajudante (R$)</label>
+        <input type="text" inputmode="decimal" id="campoAjudante" placeholder="0,00">
+      </div>
+
+      <div class="form-summary">
+        <div class="form-summary-row">
+          <span>Total de gastos</span>
+          <strong id="resumoTotalGastos">R$ 0,00</strong>
+        </div>
+        <div class="form-summary-row form-summary-row-destaque">
+          <span>Líquido após gastos</span>
+          <strong id="resumoLiquidoAposGastos">R$ 0,00</strong>
+        </div>
       </div>
 
       <div class="form-actions">
@@ -255,6 +360,12 @@
           <option value="2">2ª Quinzena</option>
         </select>
       </div>
+      <div class="filter-field">
+        <label for="filtroCidade2">Cidade</label>
+        <select id="filtroCidade2">
+          <option value="todas">Todas</option>
+        </select>
+      </div>
     </div>
 
     <div id="listaEntregasResumo" class="list-summary"></div>
@@ -265,10 +376,13 @@
         <thead>
           <tr>
             <th>Data</th>
+            <th>Cidade</th>
             <th>Quinzena</th>
             <th>Bruto</th>
             <th>%</th>
             <th>Líquido</th>
+            <th>Gastos</th>
+            <th>Líq. após gastos</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -296,7 +410,7 @@
 
     <div class="config-block">
       <h3>Exportar dados</h3>
-      <p>Gere uma planilha (CSV) com data, quinzena, mês, ano, bruto, percentual e líquido.</p>
+      <p>Gere uma planilha (CSV) com data, cidade, quinzena, mês, ano, valores e gastos da viagem.</p>
       <div class="config-actions">
         <button class="btn-secondary" id="btnExportCsvTudo">Exportar tudo (CSV)</button>
         <button class="btn-secondary" id="btnExportCsvFiltro">Exportar período filtrado (CSV)</button>
@@ -339,7 +453,7 @@
 
     <div class="config-block">
       <h3>Sobre</h3>
-      <p>Rota Certa. Seus dados ficam vinculados à sua conta Google — cada pessoa enxerga só os próprios lançamentos.</p>
+      <p>Frete na Mão. Seus dados ficam vinculados à sua conta Google — cada pessoa enxerga só os próprios lançamentos.</p>
       <p class="config-storage-info" id="storageInfo"></p>
     </div>
   </section>
