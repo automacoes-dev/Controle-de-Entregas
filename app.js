@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ROTA CERTA — lógica da aplicação
+   FRETE NA MÃO — lógica da aplicação
    Controle de entregas e recebimentos para caminhoneiros.
    Login com conta Google + dados salvos no Firestore, isolados por usuário.
    Funciona offline graças ao cache automático do Firestore (ver
@@ -38,15 +38,38 @@
     );
   }
 
-  /** Converte um documento do Firestore no formato usado pelo app. */
+  /** Converte um documento do Firestore no formato usado pelo app.
+   *  Lançamentos antigos (de antes dos campos de gastos existirem) não têm
+   *  os campos diesel/pedagio/etc. — por isso cada um usa "?? 0" como
+   *  valor padrão. Isso NUNCA altera o documento salvo no Firestore, é só
+   *  o valor usado na hora de exibir/calcular; o registro original
+   *  continua intacto no banco. */
   function docParaEntrega(doc) {
     const d = doc.data();
+    const diesel = d.diesel ?? 0;
+    const pedagio = d.pedagio ?? 0;
+    const alimentacao = d.alimentacao ?? 0;
+    const estacionamento = d.estacionamento ?? 0;
+    const outrosGastos = d.outrosGastos ?? 0;
+    const ajudante = d.ajudante ?? 0;
+    const totalGastos =
+      d.totalGastos ?? diesel + pedagio + alimentacao + estacionamento + outrosGastos + ajudante;
+    const liquidoAposGastos = d.liquidoAposGastos ?? d.liquido - totalGastos;
     return {
       id: doc.id,
       data: d.data,
+      cidade: d.cidade && d.cidade.trim() ? d.cidade : "Não informado",
       bruto: d.bruto,
       percentual: d.percentual,
       liquido: d.liquido,
+      diesel,
+      pedagio,
+      alimentacao,
+      estacionamento,
+      outrosGastos,
+      ajudante,
+      totalGastos,
+      liquidoAposGastos,
     };
   }
 
@@ -84,14 +107,7 @@
       const batch = db.batch();
       lista.forEach((e) => {
         const ref = db.collection(COLECAO).doc();
-        batch.set(ref, {
-          data: e.data,
-          bruto: e.bruto,
-          percentual: e.percentual,
-          liquido: e.liquido,
-          uid: currentUser.uid,
-          criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+        batch.set(ref, camposDeEntrega(e));
       });
       return batch.commit();
     });
@@ -103,16 +119,40 @@
     const batch = db.batch();
     lista.forEach((e) => {
       const ref = db.collection(COLECAO).doc();
-      batch.set(ref, {
-        data: e.data,
-        bruto: e.bruto,
-        percentual: e.percentual,
-        liquido: e.liquido,
-        uid: currentUser.uid,
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-      });
+      batch.set(ref, camposDeEntrega(e));
     });
     return batch.commit();
+  }
+
+  /** Monta o objeto de campos gravado no Firestore a partir de uma entrega
+   *  (própria do app ou vinda de um backup/importação antigo). Backups
+   *  antigos não têm os campos de gastos — entram como 0, sem perder o
+   *  restante do lançamento. */
+  function camposDeEntrega(e) {
+    const diesel = e.diesel ?? 0;
+    const pedagio = e.pedagio ?? 0;
+    const alimentacao = e.alimentacao ?? 0;
+    const estacionamento = e.estacionamento ?? 0;
+    const outrosGastos = e.outrosGastos ?? 0;
+    const ajudante = e.ajudante ?? 0;
+    const totalGastos = diesel + pedagio + alimentacao + estacionamento + outrosGastos + ajudante;
+    return {
+      data: e.data,
+      cidade: e.cidade && String(e.cidade).trim() ? e.cidade : "Não informado",
+      bruto: e.bruto,
+      percentual: e.percentual,
+      liquido: e.liquido,
+      diesel,
+      pedagio,
+      alimentacao,
+      estacionamento,
+      outrosGastos,
+      ajudante,
+      totalGastos,
+      liquidoAposGastos: e.liquido - totalGastos,
+      uid: currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    };
   }
 
   /** Verifica se existem dados de uma versão antiga (só localStorage, sem
@@ -210,6 +250,19 @@
     return fmtBRL.format(v || 0);
   }
 
+  /** Escapa texto livre (ex.: nome de cidade) antes de inserir em innerHTML,
+   *  evitando que caracteres como <, > ou " quebrem o HTML ou permitam
+   *  injeção de conteúdo. */
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c]));
+  }
+
   function formatPercent(v) {
     const n = Number(v) || 0;
     // Sem casas decimais desnecessárias: 10% em vez de 10,00%
@@ -243,6 +296,7 @@
     ano: hoje.getFullYear(),
     mes: hoje.getMonth(), // number 0-11, ou "todos"
     quinzena: "todas", // "todas" | 1 | 2
+    cidade: "todas",
   };
 
   function entregaPassaNoFiltro(e) {
@@ -250,6 +304,7 @@
     if (filtro.ano !== "todos" && ano !== filtro.ano) return false;
     if (filtro.mes !== "todos" && mes !== filtro.mes) return false;
     if (filtro.quinzena !== "todas" && getQuinzena(e.data) !== Number(filtro.quinzena)) return false;
+    if (filtro.cidade !== "todas" && e.cidade !== filtro.cidade) return false;
     return true;
   }
 
@@ -263,6 +318,16 @@
     return Array.from(anos).sort((a, b) => a - b);
   }
 
+  /** Lista de cidades distintas já cadastradas, para preencher o filtro e
+   *  o autocomplete do formulário. Ordenadas alfabeticamente (pt-BR). */
+  function cidadesDisponiveis() {
+    const cidades = new Set();
+    entregas.forEach((e) => {
+      if (e.cidade && e.cidade !== "Não informado") cidades.add(e.cidade);
+    });
+    return Array.from(cidades).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
   /* ------------------------------------------------------------------ *
    * 5. CÁLCULOS AGREGADOS
    * ------------------------------------------------------------------ */
@@ -273,6 +338,14 @@
       bruto: 0,
       liquido: 0,
       percSoma: 0,
+      totalGastos: 0,
+      liquidoAposGastos: 0,
+      diesel: 0,
+      pedagio: 0,
+      alimentacao: 0,
+      estacionamento: 0,
+      outrosGastos: 0,
+      ajudante: 0,
       q1: { qtd: 0, bruto: 0, liquido: 0 },
       q2: { qtd: 0, bruto: 0, liquido: 0 },
     };
@@ -280,6 +353,14 @@
       r.bruto += e.bruto;
       r.liquido += e.liquido;
       r.percSoma += e.percentual;
+      r.totalGastos += e.totalGastos || 0;
+      r.liquidoAposGastos += e.liquidoAposGastos ?? e.liquido;
+      r.diesel += e.diesel || 0;
+      r.pedagio += e.pedagio || 0;
+      r.alimentacao += e.alimentacao || 0;
+      r.estacionamento += e.estacionamento || 0;
+      r.outrosGastos += e.outrosGastos || 0;
+      r.ajudante += e.ajudante || 0;
       const q = getQuinzena(e.data);
       const alvo = q === 1 ? r.q1 : r.q2;
       alvo.qtd += 1;
@@ -335,6 +416,8 @@
     el("kpiEntregas").textContent = String(r.qtd);
     el("kpiBruto").textContent = formatCurrency(r.bruto);
     el("kpiPercentual").textContent = formatPercent(r.percMedio);
+    el("kpiGastos").textContent = formatCurrency(r.totalGastos);
+    el("kpiLiquidoAposGastos").textContent = formatCurrency(r.liquidoAposGastos);
 
     // Faixas de dias das quinzenas (mostra datas completas se um mês específico
     // estiver selecionado; caso contrário mostra apenas os dias genéricos).
@@ -358,7 +441,17 @@
     el("totalCount").textContent = String(r.qtd);
     el("totalBruto").textContent = formatCurrency(r.bruto);
     el("totalLiquido").textContent = formatCurrency(r.liquido);
+    el("totalGastos").textContent = formatCurrency(r.totalGastos);
+    el("totalLiquidoAposGastos").textContent = formatCurrency(r.liquidoAposGastos);
     el("totalMedia").textContent = formatCurrency(r.mediaLiquida);
+
+    el("gastoDiesel").textContent = formatCurrency(r.diesel);
+    el("gastoPedagio").textContent = formatCurrency(r.pedagio);
+    el("gastoAlimentacao").textContent = formatCurrency(r.alimentacao);
+    el("gastoEstacionamento").textContent = formatCurrency(r.estacionamento);
+    el("gastoOutros").textContent = formatCurrency(r.outrosGastos);
+    el("gastoAjudante").textContent = formatCurrency(r.ajudante);
+    el("gastoTotalDetalhe").textContent = formatCurrency(r.totalGastos);
 
     renderGraficoDiario(lista);
     renderGraficoQuinzena(r);
@@ -500,6 +593,22 @@
     });
   }
 
+  /** Preenche os selects de filtro de cidade e o datalist do formulário com
+   *  as cidades já cadastradas, preservando a cidade selecionada no filtro
+   *  se ela ainda existir na lista (senão volta para "Todas"). */
+  function popularSelectsDeCidade() {
+    const cidades = cidadesDisponiveis();
+    const opcoes = `<option value="todas">Todas</option>` +
+      cidades.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    [el("filtroCidade"), el("filtroCidade2")].forEach((sel) => {
+      sel.innerHTML = opcoes;
+    });
+    if (filtro.cidade !== "todas" && !cidades.includes(filtro.cidade)) {
+      filtro.cidade = "todas";
+    }
+    el("listaCidadesConhecidas").innerHTML = cidades.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("");
+  }
+
   function sincronizarFiltrosUI() {
     el("filtroAno").value = String(filtro.ano);
     el("filtroAno2").value = String(filtro.ano);
@@ -507,6 +616,8 @@
     el("filtroMes2").value = String(filtro.mes);
     el("filtroQuinzena").value = String(filtro.quinzena);
     el("filtroQuinzena2").value = String(filtro.quinzena);
+    el("filtroCidade").value = filtro.cidade;
+    el("filtroCidade2").value = filtro.cidade;
   }
 
   function aoMudarFiltro(campo, valorBruto) {
@@ -525,6 +636,8 @@
   el("filtroMes2").addEventListener("change", (e) => aoMudarFiltro("mes", e.target.value));
   el("filtroQuinzena").addEventListener("change", (e) => aoMudarFiltro("quinzena", e.target.value));
   el("filtroQuinzena2").addEventListener("change", (e) => aoMudarFiltro("quinzena", e.target.value));
+  el("filtroCidade").addEventListener("change", (e) => aoMudarFiltro("cidade", e.target.value));
+  el("filtroCidade2").addEventListener("change", (e) => aoMudarFiltro("cidade", e.target.value));
 
   /* ------------------------------------------------------------------ *
    * 9. TELA "NOVA ENTREGA" / EDIÇÃO
@@ -532,10 +645,38 @@
 
   const form = el("formEntrega");
   const campoData = el("campoData");
+  const campoCidade = el("campoCidade");
   const campoBruto = el("campoBruto");
   const campoPercentual = el("campoPercentual");
   const campoLiquido = el("campoLiquido");
+  const campoDiesel = el("campoDiesel");
+  const campoPedagio = el("campoPedagio");
+  const campoAlimentacao = el("campoAlimentacao");
+  const campoEstacionamento = el("campoEstacionamento");
+  const campoOutrosGastos = el("campoOutrosGastos");
+  const campoAjudante = el("campoAjudante");
   const campoId = el("entregaId");
+
+  const camposGasto = [campoDiesel, campoPedagio, campoAlimentacao, campoEstacionamento, campoOutrosGastos, campoAjudante];
+
+  /** Lê um campo monetário opcional: vazio conta como 0 (não é obrigatório
+   *  informar todos os gastos). */
+  function parseGastoOpcional(campo) {
+    if (!campo.value.trim()) return 0;
+    const v = parseNumeroBR(campo.value);
+    return isNaN(v) || v < 0 ? 0 : v;
+  }
+
+  function atualizarResumoGastos() {
+    const liquido = parseNumeroBR(campoLiquido.value);
+    const totalGastos = camposGasto.reduce((soma, campo) => soma + parseGastoOpcional(campo), 0);
+    const liquidoAposGastos = (isNaN(liquido) ? 0 : liquido) - totalGastos;
+    el("resumoTotalGastos").textContent = formatCurrency(totalGastos);
+    el("resumoLiquidoAposGastos").textContent = formatCurrency(liquidoAposGastos);
+  }
+
+  camposGasto.forEach((campo) => campo.addEventListener("input", atualizarResumoGastos));
+  campoLiquido.addEventListener("input", atualizarResumoGastos);
 
   function prepararFormularioNovo() {
     form.reset();
@@ -545,18 +686,27 @@
     el("btnCancelarEdicao").hidden = true;
     el("btnSalvarEntrega").textContent = "Salvar entrega";
     atualizarPreviewQuinzena();
+    atualizarResumoGastos();
   }
 
   function prepararFormularioEdicao(entrega) {
     campoId.value = entrega.id;
     campoData.value = entrega.data;
+    campoCidade.value = entrega.cidade || "";
     campoBruto.value = fmtNum2.format(entrega.bruto);
     campoPercentual.value = formatPercent(entrega.percentual).replace("%", "");
     campoLiquido.value = fmtNum2.format(entrega.liquido);
+    campoDiesel.value = entrega.diesel ? fmtNum2.format(entrega.diesel) : "";
+    campoPedagio.value = entrega.pedagio ? fmtNum2.format(entrega.pedagio) : "";
+    campoAlimentacao.value = entrega.alimentacao ? fmtNum2.format(entrega.alimentacao) : "";
+    campoEstacionamento.value = entrega.estacionamento ? fmtNum2.format(entrega.estacionamento) : "";
+    campoOutrosGastos.value = entrega.outrosGastos ? fmtNum2.format(entrega.outrosGastos) : "";
+    campoAjudante.value = entrega.ajudante ? fmtNum2.format(entrega.ajudante) : "";
     el("formTitle").textContent = "Editar entrega";
     el("btnCancelarEdicao").hidden = false;
     el("btnSalvarEntrega").textContent = "Salvar alterações";
     atualizarPreviewQuinzena();
+    atualizarResumoGastos();
     irPara("nova");
   }
 
@@ -595,17 +745,46 @@
     ev.preventDefault();
 
     const iso = campoData.value;
+    const cidade = campoCidade.value.trim();
     const bruto = parseNumeroBR(campoBruto.value);
     const percentual = parseNumeroBR(campoPercentual.value);
     const liquido = parseNumeroBR(campoLiquido.value);
 
+    const idExistente = campoId.value;
+
     if (!iso) return showToast("Informe a data da entrega.");
+    // A cidade só é obrigatória para lançamentos novos — registros antigos
+    // sem cidade continuam editáveis normalmente (aparecem como "Não
+    // informado" e não precisam ser preenchidos de novo).
+    if (!idExistente && !cidade) return showToast("Informe a cidade da entrega.");
     if (isNaN(bruto) || bruto < 0) return showToast("Valor bruto inválido.");
     if (isNaN(percentual) || percentual < 0) return showToast("Percentual inválido.");
     if (isNaN(liquido) || liquido < 0) return showToast("Valor líquido inválido.");
 
-    const idExistente = campoId.value;
-    const dados = { data: iso, bruto, percentual, liquido };
+    const diesel = parseGastoOpcional(campoDiesel);
+    const pedagio = parseGastoOpcional(campoPedagio);
+    const alimentacao = parseGastoOpcional(campoAlimentacao);
+    const estacionamento = parseGastoOpcional(campoEstacionamento);
+    const outrosGastos = parseGastoOpcional(campoOutrosGastos);
+    const ajudante = parseGastoOpcional(campoAjudante);
+    const totalGastos = diesel + pedagio + alimentacao + estacionamento + outrosGastos + ajudante;
+    const liquidoAposGastos = liquido - totalGastos;
+
+    const dados = {
+      data: iso,
+      cidade: cidade || "Não informado",
+      bruto,
+      percentual,
+      liquido,
+      diesel,
+      pedagio,
+      alimentacao,
+      estacionamento,
+      outrosGastos,
+      ajudante,
+      totalGastos,
+      liquidoAposGastos,
+    };
     const btn = el("btnSalvarEntrega");
     btn.disabled = true;
 
@@ -672,10 +851,13 @@
     return `
       <tr>
         <td>${formatDateBR(e.data)}</td>
+        <td>${escapeHtml(e.cidade || "Não informado")}</td>
         <td><span class="tag-quinzena q${q}">${q}ª</span></td>
         <td>${formatCurrency(e.bruto)}</td>
         <td>${formatPercent(e.percentual)}</td>
         <td class="col-liquido">${formatCurrency(e.liquido)}</td>
+        <td>${formatCurrency(e.totalGastos || 0)}</td>
+        <td class="col-liquido">${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</td>
         <td>
           <div class="row-actions">
             <button type="button" class="act-edit" data-edit="${e.id}">Editar</button>
@@ -690,13 +872,15 @@
     return `
       <div class="entrega-card">
         <div class="entrega-card-top">
-          <span class="entrega-card-date">${formatDateBR(e.data)}</span>
+          <span class="entrega-card-date">${formatDateBR(e.data)} · ${escapeHtml(e.cidade || "Não informado")}</span>
           <span class="tag-quinzena q${q}">${q}ª quinzena</span>
         </div>
         <div class="entrega-card-body">
           <div class="entrega-card-field"><span>Bruto</span><strong>${formatCurrency(e.bruto)}</strong></div>
           <div class="entrega-card-field"><span>%</span><strong>${formatPercent(e.percentual)}</strong></div>
           <div class="entrega-card-field liquido"><span>Líquido</span><strong>${formatCurrency(e.liquido)}</strong></div>
+          <div class="entrega-card-field"><span>Gastos</span><strong>${formatCurrency(e.totalGastos || 0)}</strong></div>
+          <div class="entrega-card-field liquido"><span>Líq. após gastos</span><strong>${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</strong></div>
         </div>
         <div class="entrega-card-actions">
           <button type="button" class="act-edit" data-edit="${e.id}">Editar</button>
@@ -813,7 +997,12 @@
   }
 
   function gerarCSV(lista) {
-    const linhas = [["Data", "Quinzena", "Mês", "Ano", "Valor Bruto", "Percentual", "Valor Líquido"]];
+    const linhas = [[
+      "Data", "Cidade", "Quinzena", "Mês", "Ano",
+      "Valor Bruto", "Percentual", "Valor Líquido",
+      "Diesel", "Pedágio", "Alimentação", "Estacionamento", "Outros Gastos", "Ajudante",
+      "Total de Gastos", "Líquido após Gastos",
+    ]];
     lista
       .slice()
       .sort((a, b) => (a.data < b.data ? -1 : 1))
@@ -821,12 +1010,21 @@
         const { ano, mes } = partesISO(e.data);
         linhas.push([
           formatDateBR(e.data),
+          e.cidade || "Não informado",
           `${getQuinzena(e.data)}ª`,
           NOMES_MESES[mes],
           String(ano),
           fmtNum2.format(e.bruto),
           fmtNum2.format(e.percentual),
           fmtNum2.format(e.liquido),
+          fmtNum2.format(e.diesel || 0),
+          fmtNum2.format(e.pedagio || 0),
+          fmtNum2.format(e.alimentacao || 0),
+          fmtNum2.format(e.estacionamento || 0),
+          fmtNum2.format(e.outrosGastos || 0),
+          fmtNum2.format(e.ajudante || 0),
+          fmtNum2.format(e.totalGastos || 0),
+          fmtNum2.format(e.liquidoAposGastos ?? e.liquido),
         ]);
       });
     const csv = linhas.map((l) => l.map(csvEscape).join(";")).join("\r\n");
@@ -840,25 +1038,25 @@
 
   el("btnExportCsvTudo").addEventListener("click", () => {
     if (!entregas.length) return showToast("Não há entregas para exportar.");
-    baixarArquivo(`rota-certa-todas-entregas.csv`, gerarCSV(entregas), "text/csv;charset=utf-8");
+    baixarArquivo(`frete-na-mao-todas-entregas.csv`, gerarCSV(entregas), "text/csv;charset=utf-8");
     showToast("CSV exportado.");
   });
 
   el("btnExportCsvFiltro").addEventListener("click", () => {
     const lista = listaFiltrada();
     if (!lista.length) return showToast("Não há entregas no período filtrado.");
-    baixarArquivo(`rota-certa-periodo-filtrado.csv`, gerarCSV(lista), "text/csv;charset=utf-8");
+    baixarArquivo(`frete-na-mao-periodo-filtrado.csv`, gerarCSV(lista), "text/csv;charset=utf-8");
     showToast("CSV do período exportado.");
   });
 
   el("btnExportBackup").addEventListener("click", () => {
     const payload = {
-      app: "rota-certa",
-      versao: 1,
+      app: "frete-na-mao",
+      versao: 2,
       exportadoEm: new Date().toISOString(),
       entregas,
     };
-    baixarArquivo(`rota-certa-backup.json`, JSON.stringify(payload, null, 2), "application/json");
+    baixarArquivo(`frete-na-mao-backup.json`, JSON.stringify(payload, null, 2), "application/json");
     showToast("Backup exportado.");
   });
 
@@ -968,6 +1166,7 @@
 
   function renderTudo() {
     popularSelectsDeAno();
+    popularSelectsDeCidade();
     sincronizarFiltrosUI();
     renderDashboard();
     // As demais telas são renderizadas sob demanda ao serem abertas,
