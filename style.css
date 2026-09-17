@@ -320,6 +320,26 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .total-item-highlight strong { color: var(--yellow); }
 
 /* ---------------------------------------------------------------------- */
+/* DETALHAMENTO DE GASTOS                                                  */
+/* ---------------------------------------------------------------------- */
+
+.gastos-grid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.gasto-item { display: flex; flex-direction: column; gap: 3px; }
+.gasto-item span { font-size: 11.5px; color: var(--text-faint); }
+.gasto-item strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.gasto-item-destaque { grid-column: span 2; }
+.gasto-item-destaque strong { color: var(--yellow); font-size: 19px; }
+
+/* ---------------------------------------------------------------------- */
 /* GRÁFICOS                                                                */
 /* ---------------------------------------------------------------------- */
 
@@ -648,6 +668,12 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .nav-icon { font-size: 19px; line-height: 1; }
 .nav-btn.is-active { color: var(--yellow); }
 
+/* Navegação de desktop (dentro do cabeçalho) — escondida no celular,
+   onde a navegação fica na barra inferior (.bottom-nav). */
+.desktop-nav {
+  display: none;
+}
+
 .fab {
   position: fixed;
   right: 18px;
@@ -733,8 +759,34 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 @media (min-width: 640px) {
   :root { --max-w: 880px; }
 
-  body { padding-bottom: 40px; }
+  body { padding-bottom: 0; }
+
+  /* No celular a navegação fica fixa embaixo da tela; no computador ela
+     passa a viver dentro do cabeçalho, então escondemos a barra inferior
+     e o botão flutuante e mostramos a nav do cabeçalho no lugar. */
   .bottom-nav, .fab { display: none; }
+  .desktop-nav {
+    display: flex;
+    gap: 4px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    padding: 4px;
+  }
+  .desktop-nav .nav-btn {
+    flex: none;
+    flex-direction: row;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .desktop-nav .nav-btn .nav-icon { font-size: 15px; }
+  .desktop-nav .nav-btn.is-active {
+    background: var(--yellow);
+    color: #1A1300;
+  }
+
+  .header-inner { gap: 16px; }
 
   #app-main { padding: 28px 24px 60px; }
 
@@ -745,8 +797,10 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   .kpi-primary .kpi-value { font-size: 30px; }
 
   .total-strip { grid-template-columns: repeat(4, 1fr); }
+  .gastos-grid { grid-template-columns: repeat(3, 1fr); }
+  .gasto-item-destaque { grid-column: span 1; }
 
-  .filter-bar { grid-template-columns: 180px 220px 200px; }
+  .filter-bar { grid-template-columns: 180px 220px 200px 200px; }
 
   .table-wrap { display: block; }
   .entregas-cards { display: none; }
@@ -772,3 +826,142 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   text-align: left;
 }
 .file-warning strong { color: #FFE9B8; }
+
+/* ======================= TELA DE LOGIN ======================= */
+.login-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+.login-box {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-mark-lg {
+  width: 44px;
+  height: 28px;
+  margin-bottom: 4px;
+}
+
+.login-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  color: var(--text);
+  margin: 0;
+}
+
+.login-subtitle {
+  font-size: 14.5px;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #FFFFFF;
+  color: #1F2937;
+  border: none;
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn-google:active { transform: scale(0.98); }
+
+.login-hint {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--red);
+  margin: 0;
+}
+
+.login-privacy {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+/* ======================= CARD DE CONTA (Ajustes) ======================= */
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.conta-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.conta-nome {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.conta-email {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ======================= NOVOS CAMPOS: GASTOS DA VIAGEM ======================= */
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 22px 0 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.form-summary {
+  background: var(--surface-2);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  margin: 14px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.form-summary-row strong { color: var(--text); font-weight: 600; }
+
+.form-summary-row-destaque strong {
+  color: var(--yellow);
+  font-size: 16px;
+}
