@@ -1,4 +1,4 @@
-# Rota Certa — Controle de Entregas
+# Frete na Mão — Controle de Entregas
 
 Sistema web para caminhoneiros controlarem entregas e o recebimento por
 quinzena. Agora com **login com conta Google**: cada pessoa que usa o app
@@ -16,7 +16,7 @@ Firebase seu para funcionar (é o Firebase que guarda os logins e os dados).
 
 ### 1. Crie o projeto no Firebase
 1. Acesse **console.firebase.google.com** e entre com sua conta Google.
-2. Clique em **"Adicionar projeto"**, dê um nome (ex.: "rota-certa") e conclua a criação.
+2. Clique em **"Adicionar projeto"**, dê um nome (ex.: "frete-na-mao") e conclua a criação.
 
 ### 2. Ative o login com Google
 1. No menu à esquerda, vá em **Compilação (Build) → Authentication**.
@@ -165,8 +165,38 @@ icon-512.png        Ícone do app em alta resolução
   campo `uid` igual ao ID da conta Google que a criou.
 - A quinzena **nunca é salva** — é sempre recalculada a partir da data no
   momento de exibir, editar ou filtrar.
+- Campos de cada lançamento: `data`, `cidade`, `bruto`, `percentual`,
+  `liquido`, `diesel`, `pedagio`, `alimentacao`, `estacionamento`,
+  `outrosGastos`, `totalGastos`, `liquidoAposGastos`.
+- **Compatibilidade com lançamentos antigos**: registros criados antes da
+  cidade e dos gastos existirem continuam no banco exatamente como estavam.
+  Ao exibi-los, o app apenas preenche os campos que faltam só na tela —
+  `cidade` aparece como "Não informado" e os gastos como R$ 0,00 — sem
+  gravar nada de novo no Firestore só por isso. Só grava esses valores se
+  você efetivamente editar e salvar aquele lançamento.
 - **Ajustes → Exportar backup (JSON)** continua disponível a qualquer
   momento, por usuário logado.
 - **Ajustes → Importar backup** substitui todos os dados da conta logada
   pelos do arquivo (pede confirmação antes).
 - **Ajustes → Apagar tudo** remove todos os lançamentos da conta logada.
+
+## Novidades desta atualização
+
+- **Nome do app**: "Rota Certa" virou **"Frete na Mão"** — mesmo layout,
+  mesmas telas, mesmo link, só o nome mudou (título da aba, tela de login,
+  cabeçalho, ícone instalável).
+- **Cidade da entrega**: novo campo no formulário de Nova Entrega, logo após
+  a data. Obrigatório só para lançamentos novos; lançamentos antigos sem
+  cidade aparecem como "Não informado" e não precisam ser preenchidos
+  retroativamente.
+- **Filtro por cidade**: no Painel e em Entregas, ao lado dos filtros de
+  ano/mês/quinzena — combina com eles normalmente.
+- **Gastos da viagem**: Diesel, Pedágio, Alimentação, Estacionamento e
+  Outros — todos opcionais. O app calcula sozinho o **Total de Gastos** e o
+  **Líquido após Gastos** (Receita Líquida − Total de Gastos); a Receita
+  Líquida em si nunca é alterada por isso.
+- **Navegação no computador corrigida**: havia uma regra de CSS que escondia
+  os botões de navegação em telas maiores que a do celular, sem colocar
+  nada no lugar. Agora existe uma barra de navegação equivalente dentro do
+  cabeçalho, visível só no desktop (no celular continua a barra de baixo,
+  como sempre foi).
