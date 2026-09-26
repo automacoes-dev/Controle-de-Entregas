@@ -22,6 +22,9 @@
   --green-soft: rgba(52, 211, 153, 0.14);
   --red: #FB6B6B;
   --red-soft: rgba(251, 107, 107, 0.14);
+  --blue-light: #7DD3FC;
+  --blue-light-soft: rgba(125, 211, 252, 0.14);
+  --blue-strong: #0EA5E9;
 
   /* Texto */
   --text: #F3F6F9;
@@ -103,20 +106,13 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .brand { display: flex; align-items: center; gap: 8px; }
 
 .brand-mark {
-  width: 22px; height: 14px;
-  border-radius: 3px;
-  background: repeating-linear-gradient(
-    90deg, var(--yellow) 0 8px, transparent 8px 14px
-  );
-  position: relative;
+  width: 30px;
+  height: 20px;
+  color: var(--yellow);
+  display: inline-flex;
+  flex-shrink: 0;
 }
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-bottom: 2px solid var(--text-faint);
-  top: 60%;
-}
+.brand-mark svg { width: 100%; height: 100%; display: block; }
 
 .brand-name {
   font-family: var(--font-display);
@@ -230,8 +226,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 
 .kpi-primary {
   grid-column: 1 / -1;
-  border-color: rgba(245,183,0,0.4);
-  background: linear-gradient(135deg, var(--yellow-soft), var(--surface) 60%);
+  border-color: rgba(52,211,153,0.4);
+  background: linear-gradient(135deg, var(--green-soft), var(--surface) 60%);
 }
 
 .kpi-icon { font-size: 18px; }
@@ -249,7 +245,17 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   line-height: 1.15;
 }
 
-.kpi-primary .kpi-value { font-size: 34px; color: var(--yellow); }
+.kpi-primary .kpi-value { font-size: 34px; color: var(--green); }
+
+/* Hierarquia financeira: cada indicador tem uma cor fixa, em qualquer tela
+   (cards, tabela, cards de entrega). Líquido = verde, líquido após gastos =
+   amarelo/dourado, gastos = vermelho, bruto = branco, percentual = azul
+   claro. Mantido consistente para leitura rápida no celular. */
+.valor-liquido { color: var(--green); }
+.valor-liquido-apos-gastos { color: var(--yellow); }
+.valor-gastos { color: var(--red); }
+.valor-bruto { color: var(--text); }
+.valor-percentual { color: var(--blue-light); }
 
 /* ---------------------------------------------------------------------- */
 /* QUINZENAS                                                               */
@@ -317,7 +323,9 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .total-item { display: flex; flex-direction: column; gap: 3px; }
 .total-item span { font-size: 11.5px; color: var(--text-faint); }
 .total-item strong { font-family: var(--font-display); font-size: 19px; font-weight: 600; }
-.total-item-highlight strong { color: var(--yellow); }
+/* A cor de cada valor vem das classes .valor-* aplicadas no próprio
+   elemento (ver hierarquia financeira) — total-item-highlight só controla
+   o destaque de tamanho/peso, não a cor. */
 
 /* ---------------------------------------------------------------------- */
 /* DETALHAMENTO DE GASTOS                                                  */
@@ -337,7 +345,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .gasto-item span { font-size: 11.5px; color: var(--text-faint); }
 .gasto-item strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
 .gasto-item-destaque { grid-column: span 2; }
-.gasto-item-destaque strong { color: var(--yellow); font-size: 19px; }
+.gasto-item-destaque strong { font-size: 19px; }
 
 /* ---------------------------------------------------------------------- */
 /* GRÁFICOS                                                                */
@@ -510,7 +518,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   border-bottom: 1px solid var(--border-soft);
 }
 .entregas-table tr:last-child td { border-bottom: none; }
-.entregas-table td.col-liquido { color: var(--yellow); font-weight: 600; }
+.entregas-table td.valor-liquido { font-weight: 600; }
+.entregas-table td.valor-liquido-apos-gastos { font-weight: 600; }
 
 .tag-quinzena {
   display: inline-block;
@@ -563,7 +572,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 }
 .entrega-card-field span { display: block; font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
 .entrega-card-field strong { font-size: 14.5px; }
-.entrega-card-field.liquido strong { color: var(--yellow); }
+/* Cores dos valores financeiros vêm das classes .valor-* (ver hierarquia
+   financeira, logo abaixo dos cards KPI) — aplicadas direto no <strong>. */
 .entrega-card-actions { display: flex; gap: 8px; }
 .entrega-card-actions button {
   flex: 1;
@@ -666,7 +676,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   padding: 6px 2px;
 }
 .nav-icon { font-size: 19px; line-height: 1; }
-.nav-btn.is-active { color: var(--yellow); }
+.nav-btn.is-active { color: var(--blue-light); }
 
 /* Navegação de desktop (dentro do cabeçalho) — escondida no celular,
    onde a navegação fica na barra inferior (.bottom-nav). */
@@ -782,8 +792,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   }
   .desktop-nav .nav-btn .nav-icon { font-size: 15px; }
   .desktop-nav .nav-btn.is-active {
-    background: var(--yellow);
-    color: #1A1300;
+    background: var(--blue-strong);
+    color: #FFFFFF;
   }
 
   .header-inner { gap: 16px; }
@@ -959,9 +969,283 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   color: var(--text-dim);
 }
 
-.form-summary-row strong { color: var(--text); font-weight: 600; }
+.form-summary-row strong { font-weight: 600; }
+.form-summary-row strong:not([class*="valor-"]) { color: var(--text); }
 
 .form-summary-row-destaque strong {
   color: var(--yellow);
   font-size: 16px;
 }
+
+/* ======================= AVISO: NOVA VERSÃO DISPONÍVEL ======================= */
+.update-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  background: var(--surface-2);
+  border: 1px solid var(--blue-strong);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  animation: update-banner-in 0.25s ease-out;
+}
+
+@keyframes update-banner-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.update-banner-actions { display: flex; gap: 8px; }
+
+.btn-update {
+  flex: 1;
+  background: var(--blue-strong);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-s);
+  padding: 9px 14px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.btn-update:active { transform: scale(0.98); }
+
+.btn-update-dismiss {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  padding: 9px 10px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .update-banner {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: 320px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* ======================= CARD "BAIXE O APP" ======================= */
+.download-card {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  padding: 18px;
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.download-card-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.download-card-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  margin: 4px 0 2px;
+}
+
+.download-card-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.download-card-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-store {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-store:active { transform: scale(0.98); }
+.btn-store[disabled] { opacity: 0.55; cursor: default; }
+.btn-store[disabled]:active { transform: none; }
+
+.download-card-qr {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.download-card-qr img {
+  width: 128px;
+  height: 128px;
+  border-radius: var(--radius-s);
+  background: #fff;
+  padding: 6px;
+}
+.download-card-qr span {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.download-card-skip {
+  margin-top: 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ======================= ASSISTENTE DE IA ======================= */
+.assistente-intro {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: -6px 0 14px;
+}
+
+.assistente-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 14px;
+  min-height: 280px;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.assistente-msg { display: flex; }
+.assistente-msg p {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: var(--radius-m);
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 85%;
+  white-space: pre-line;
+}
+
+.assistente-msg-bot { justify-content: flex-start; }
+.assistente-msg-bot p { background: var(--surface-2); color: var(--text); border-bottom-left-radius: 4px; }
+
+.assistente-msg-user { justify-content: flex-end; }
+.assistente-msg-user p { background: var(--blue-strong); color: #fff; border-bottom-right-radius: 4px; }
+
+.assistente-confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-left: 13px;
+}
+.assistente-confirm-actions button { padding: 8px 14px; font-size: 13px; }
+
+.assistente-form {
+  display: flex;
+  gap: 8px;
+}
+.assistente-form input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 14px;
+}
+.assistente-form input:focus-visible { outline: 2px solid var(--blue-light); }
+.assistente-form .btn-primary { padding: 0 20px; }
+
+/* ======================= MICROINTERAÇÕES ======================= */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes card-entrada {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-card, .gasto-item, .quinzena-card, .entrega-card, .total-strip {
+    animation: card-entrada 0.32s ease-out backwards;
+  }
+  .kpi-grid .kpi-card:nth-child(1) { animation-delay: 0.02s; }
+  .kpi-grid .kpi-card:nth-child(2) { animation-delay: 0.06s; }
+  .kpi-grid .kpi-card:nth-child(3) { animation-delay: 0.10s; }
+  .kpi-grid .kpi-card:nth-child(4) { animation-delay: 0.14s; }
+  .kpi-grid .kpi-card:nth-child(5) { animation-delay: 0.18s; }
+  .kpi-grid .kpi-card:nth-child(6) { animation-delay: 0.22s; }
+}
+
+/* Hover só faz sentido com mouse de verdade (evita "toque preso" em
+   celulares, que simulam :hover ao tocar). */
+@media (hover: hover) and (pointer: fine) {
+  .kpi-card, .entrega-card, .gasto-item, .quinzena-card {
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .kpi-card:hover, .entrega-card:hover, .gasto-item:hover, .quinzena-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--blue-light);
+  }
+  .nav-btn { transition: color 0.15s ease; }
+  .desktop-nav .nav-btn { transition: background 0.15s ease, color 0.15s ease; }
+}
+
+.kpi-value, .valor-liquido, .valor-gastos, .valor-liquido-apos-gastos {
+  transition: color 0.2s ease;
+}
+
+/* ======================= TOOLTIP DOS GRÁFICOS ======================= */
+.chart-tooltip {
+  position: fixed;
+  z-index: 50;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  white-space: nowrap;
+}
+.chart-tooltip strong { color: var(--yellow); }
