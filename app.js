@@ -10,6 +10,19 @@
   "use strict";
 
   /* ------------------------------------------------------------------ *
+   * 0. CONFIGURAÇÃO DOS APLICATIVOS (Android/iOS)
+   *    ÚNICO lugar do projeto que precisa ser editado quando os apps forem
+   *    publicados. Enquanto forem null, o site mostra "Em breve" em vez de
+   *    um link quebrado ou inventado. Assim que você tiver os links reais
+   *    da Google Play e da App Store, cole-os aqui entre aspas — nenhum
+   *    outro arquivo precisa mudar.
+   * ------------------------------------------------------------------ */
+  const APP_LINKS = {
+    android: null, // Ex.: "https://play.google.com/store/apps/details?id=..."
+    ios: null, // Ex.: "https://apps.apple.com/app/id..."
+  };
+
+  /* ------------------------------------------------------------------ *
    * 1. AUTENTICAÇÃO E CAMADA DE ARMAZENAMENTO (Firebase)
    *    Toda leitura/escrita de entregas passa pelas funções abaixo, que
    *    conversam com o Firestore filtrando sempre pelo usuário logado.
@@ -68,6 +81,8 @@
       estacionamento,
       outrosGastos,
       ajudante,
+      adicionaisDescricao: d.adicionaisDescricao || "",
+      adicionaisValor: d.adicionaisValor ?? 0,
       totalGastos,
       liquidoAposGastos,
     };
@@ -148,6 +163,8 @@
       estacionamento,
       outrosGastos,
       ajudante,
+      adicionaisDescricao: e.adicionaisDescricao || "",
+      adicionaisValor: e.adicionaisValor ?? 0,
       totalGastos,
       liquidoAposGastos: e.liquido - totalGastos,
       uid: currentUser.uid,
@@ -250,6 +267,40 @@
     return fmtBRL.format(v || 0);
   }
 
+  /** Anima um valor numérico exibido num elemento, de onde estava para o
+   *  novo valor (usado nos números do dashboard, para dar uma sensação
+   *  mais viva ao trocar de filtro). formatador recebe o número e devolve
+   *  o texto já formatado (ex.: formatCurrency, formatPercent). Se o
+   *  elemento ainda não tinha um valor numérico guardado (primeira vez),
+   *  não anima — só mostra o valor final direto. */
+  function animarNumero(elId, valorFinal, formatador) {
+    const elemento = el(elId);
+    if (!elemento) return;
+    const valorAnterior = Number(elemento.dataset.valorAtual);
+    elemento.dataset.valorAtual = String(valorFinal);
+
+    if (isNaN(valorAnterior) || Math.abs(valorFinal - valorAnterior) < 0.005) {
+      elemento.textContent = formatador(valorFinal);
+      return;
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      elemento.textContent = formatador(valorFinal);
+      return;
+    }
+
+    const duracaoMs = 400;
+    const inicio = performance.now();
+    function passo(agora) {
+      const progresso = Math.min(1, (agora - inicio) / duracaoMs);
+      // Easing suave (ease-out) em vez de linear.
+      const suavizado = 1 - Math.pow(1 - progresso, 3);
+      const valorAtual = valorAnterior + (valorFinal - valorAnterior) * suavizado;
+      elemento.textContent = formatador(valorAtual);
+      if (progresso < 1) requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
+  }
+
   /** Escapa texto livre (ex.: nome de cidade) antes de inserir em innerHTML,
    *  evitando que caracteres como <, > ou " quebrem o HTML ou permitam
    *  injeção de conteúdo. */
@@ -346,6 +397,7 @@
       estacionamento: 0,
       outrosGastos: 0,
       ajudante: 0,
+      adicionaisValor: 0,
       q1: { qtd: 0, bruto: 0, liquido: 0 },
       q2: { qtd: 0, bruto: 0, liquido: 0 },
     };
@@ -361,6 +413,7 @@
       r.estacionamento += e.estacionamento || 0;
       r.outrosGastos += e.outrosGastos || 0;
       r.ajudante += e.ajudante || 0;
+      r.adicionaisValor += e.adicionaisValor || 0;
       const q = getQuinzena(e.data);
       const alvo = q === 1 ? r.q1 : r.q2;
       alvo.qtd += 1;
@@ -412,12 +465,12 @@
 
     el("periodoAtual").textContent = labelPeriodoHeader();
 
-    el("kpiLiquido").textContent = formatCurrency(r.liquido);
-    el("kpiEntregas").textContent = String(r.qtd);
-    el("kpiBruto").textContent = formatCurrency(r.bruto);
-    el("kpiPercentual").textContent = formatPercent(r.percMedio);
-    el("kpiGastos").textContent = formatCurrency(r.totalGastos);
-    el("kpiLiquidoAposGastos").textContent = formatCurrency(r.liquidoAposGastos);
+    animarNumero("kpiLiquido", r.liquido, formatCurrency);
+    animarNumero("kpiEntregas", r.qtd, (v) => String(Math.round(v)));
+    animarNumero("kpiBruto", r.bruto, formatCurrency);
+    animarNumero("kpiPercentual", r.percMedio, formatPercent);
+    animarNumero("kpiGastos", r.totalGastos, formatCurrency);
+    animarNumero("kpiLiquidoAposGastos", r.liquidoAposGastos, formatCurrency);
 
     // Faixas de dias das quinzenas (mostra datas completas se um mês específico
     // estiver selecionado; caso contrário mostra apenas os dias genéricos).
@@ -444,6 +497,7 @@
     el("totalGastos").textContent = formatCurrency(r.totalGastos);
     el("totalLiquidoAposGastos").textContent = formatCurrency(r.liquidoAposGastos);
     el("totalMedia").textContent = formatCurrency(r.mediaLiquida);
+    el("totalAdicionais").textContent = formatCurrency(r.adicionaisValor);
 
     el("gastoDiesel").textContent = formatCurrency(r.diesel);
     el("gastoPedagio").textContent = formatCurrency(r.pedagio);
@@ -540,6 +594,7 @@
 
     const maxLabels = 12;
     const passoLabel = Math.ceil(n / maxLabels);
+    const barras = []; // guardado para o tooltip (hover/toque)
 
     valores.forEach((v, i) => {
       const h = max > 0 ? (v / max) * (alturaUtil - 16) : 0;
@@ -550,6 +605,7 @@
       ctx.fillStyle = cor;
       roundRectTop(ctx, x, y, barW, h, 4);
       ctx.fill();
+      barras.push({ x, y, w: barW, h: Math.max(h, 6), label: labels[i], valor: v });
 
       // valor acima da barra
       if (opts.horizontalLabelsGrandes || n <= 8) {
@@ -655,6 +711,8 @@
   const campoEstacionamento = el("campoEstacionamento");
   const campoOutrosGastos = el("campoOutrosGastos");
   const campoAjudante = el("campoAjudante");
+  const campoAdicionaisDescricao = el("campoAdicionaisDescricao");
+  const campoAdicionaisValor = el("campoAdicionaisValor");
   const campoId = el("entregaId");
 
   const camposGasto = [campoDiesel, campoPedagio, campoAlimentacao, campoEstacionamento, campoOutrosGastos, campoAjudante];
@@ -702,6 +760,8 @@
     campoEstacionamento.value = entrega.estacionamento ? fmtNum2.format(entrega.estacionamento) : "";
     campoOutrosGastos.value = entrega.outrosGastos ? fmtNum2.format(entrega.outrosGastos) : "";
     campoAjudante.value = entrega.ajudante ? fmtNum2.format(entrega.ajudante) : "";
+    campoAdicionaisDescricao.value = entrega.adicionaisDescricao || "";
+    campoAdicionaisValor.value = entrega.adicionaisValor ? fmtNum2.format(entrega.adicionaisValor) : "";
     el("formTitle").textContent = "Editar entrega";
     el("btnCancelarEdicao").hidden = false;
     el("btnSalvarEntrega").textContent = "Salvar alterações";
@@ -769,6 +829,8 @@
     const ajudante = parseGastoOpcional(campoAjudante);
     const totalGastos = diesel + pedagio + alimentacao + estacionamento + outrosGastos + ajudante;
     const liquidoAposGastos = liquido - totalGastos;
+    const adicionaisDescricao = campoAdicionaisDescricao.value.trim();
+    const adicionaisValor = parseGastoOpcional(campoAdicionaisValor);
 
     const dados = {
       data: iso,
@@ -782,6 +844,8 @@
       estacionamento,
       outrosGastos,
       ajudante,
+      adicionaisDescricao,
+      adicionaisValor,
       totalGastos,
       liquidoAposGastos,
     };
@@ -853,11 +917,11 @@
         <td>${formatDateBR(e.data)}</td>
         <td>${escapeHtml(e.cidade || "Não informado")}</td>
         <td><span class="tag-quinzena q${q}">${q}ª</span></td>
-        <td>${formatCurrency(e.bruto)}</td>
-        <td>${formatPercent(e.percentual)}</td>
-        <td class="col-liquido">${formatCurrency(e.liquido)}</td>
-        <td>${formatCurrency(e.totalGastos || 0)}</td>
-        <td class="col-liquido">${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</td>
+        <td class="valor-bruto">${formatCurrency(e.bruto)}</td>
+        <td class="valor-percentual">${formatPercent(e.percentual)}</td>
+        <td class="valor-liquido">${formatCurrency(e.liquido)}</td>
+        <td class="valor-gastos">${formatCurrency(e.totalGastos || 0)}</td>
+        <td class="valor-liquido-apos-gastos">${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</td>
         <td>
           <div class="row-actions">
             <button type="button" class="act-edit" data-edit="${e.id}">Editar</button>
@@ -876,11 +940,11 @@
           <span class="tag-quinzena q${q}">${q}ª quinzena</span>
         </div>
         <div class="entrega-card-body">
-          <div class="entrega-card-field"><span>Bruto</span><strong>${formatCurrency(e.bruto)}</strong></div>
-          <div class="entrega-card-field"><span>%</span><strong>${formatPercent(e.percentual)}</strong></div>
-          <div class="entrega-card-field liquido"><span>Líquido</span><strong>${formatCurrency(e.liquido)}</strong></div>
-          <div class="entrega-card-field"><span>Gastos</span><strong>${formatCurrency(e.totalGastos || 0)}</strong></div>
-          <div class="entrega-card-field liquido"><span>Líq. após gastos</span><strong>${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</strong></div>
+          <div class="entrega-card-field"><span>Bruto</span><strong class="valor-bruto">${formatCurrency(e.bruto)}</strong></div>
+          <div class="entrega-card-field"><span>%</span><strong class="valor-percentual">${formatPercent(e.percentual)}</strong></div>
+          <div class="entrega-card-field"><span>Líquido</span><strong class="valor-liquido">${formatCurrency(e.liquido)}</strong></div>
+          <div class="entrega-card-field"><span>Gastos</span><strong class="valor-gastos">${formatCurrency(e.totalGastos || 0)}</strong></div>
+          <div class="entrega-card-field"><span>Líq. após gastos</span><strong class="valor-liquido-apos-gastos">${formatCurrency(e.liquidoAposGastos ?? e.liquido)}</strong></div>
         </div>
         <div class="entrega-card-actions">
           <button type="button" class="act-edit" data-edit="${e.id}">Editar</button>
@@ -977,6 +1041,7 @@
   function renderConfig() {
     el("storageInfo").textContent =
       `${entregas.length} entrega${entregas.length === 1 ? "" : "s"} sincronizada${entregas.length === 1 ? "" : "s"} na sua conta.`;
+    el("versaoApp").textContent = `Frete na Mão v${VERSAO_APP}`;
     if (currentUser) {
       el("contaNome").textContent = currentUser.displayName || "";
       el("contaEmail").textContent = currentUser.email || "";
@@ -1001,7 +1066,7 @@
       "Data", "Cidade", "Quinzena", "Mês", "Ano",
       "Valor Bruto", "Percentual", "Valor Líquido",
       "Diesel", "Pedágio", "Alimentação", "Estacionamento", "Outros Gastos", "Ajudante",
-      "Total de Gastos", "Líquido após Gastos",
+      "Total de Gastos", "Líquido após Gastos", "Adicionais (descrição)", "Adicionais (R$)",
     ]];
     lista
       .slice()
@@ -1025,6 +1090,8 @@
           fmtNum2.format(e.ajudante || 0),
           fmtNum2.format(e.totalGastos || 0),
           fmtNum2.format(e.liquidoAposGastos ?? e.liquido),
+          e.adicionaisDescricao || "",
+          fmtNum2.format(e.adicionaisValor || 0),
         ]);
       });
     const csv = linhas.map((l) => l.map(csvEscape).join(";")).join("\r\n");
@@ -1117,6 +1184,114 @@
   });
 
   /* ------------------------------------------------------------------ *
+   * 12.1 ASSISTENTE DE IA — chat que fala com o Cloud Function do
+   *      Firebase (functions/index.js). O backend valida o usuário
+   *      autenticado sozinho (context.auth) — nunca confiamos aqui em
+   *      nenhum "uid" que o front-end mandaria por conta própria.
+   * ------------------------------------------------------------------ */
+
+  const assistenteChat = el("assistenteChat");
+  const formAssistente = el("formAssistente");
+  const campoAssistente = el("campoAssistente");
+  let assistenteOcupado = false;
+
+  function assistenteAdicionarMensagem(texto, autor) {
+    const div = document.createElement("div");
+    div.className = `assistente-msg assistente-msg-${autor}`;
+    const p = document.createElement("p");
+    p.textContent = texto;
+    div.appendChild(p);
+    assistenteChat.appendChild(div);
+    assistenteChat.scrollTop = assistenteChat.scrollHeight;
+    return div;
+  }
+
+  function assistenteAdicionarConfirmacao(mensagem, acao) {
+    const div = assistenteAdicionarMensagem(mensagem, "bot");
+    const acoesDiv = document.createElement("div");
+    acoesDiv.className = "assistente-confirm-actions";
+
+    const btnConfirmar = document.createElement("button");
+    btnConfirmar.type = "button";
+    btnConfirmar.className = "btn-primary";
+    btnConfirmar.textContent = "Confirmar";
+
+    const btnCancelar = document.createElement("button");
+    btnCancelar.type = "button";
+    btnCancelar.className = "btn-secondary";
+    btnCancelar.textContent = "Cancelar";
+
+    btnConfirmar.addEventListener("click", () => {
+      acoesDiv.remove();
+      executarAcaoAssistente(acao);
+    });
+    btnCancelar.addEventListener("click", () => {
+      acoesDiv.remove();
+      assistenteAdicionarMensagem("Ok, não fiz nada.", "bot");
+    });
+
+    acoesDiv.appendChild(btnConfirmar);
+    acoesDiv.appendChild(btnCancelar);
+    div.appendChild(acoesDiv);
+    assistenteChat.scrollTop = assistenteChat.scrollHeight;
+  }
+
+  function executarAcaoAssistente(acao) {
+    const chamar = window.rotaCertaFunctions.httpsCallable("executarComando");
+    chamar({ acao })
+      .then((resultado) => {
+        assistenteAdicionarMensagem(resultado.data.mensagem || "Feito.", "bot");
+        // A lista de entregas já atualiza sozinha pelo listener do
+        // Firestore (onSnapshot) — não precisa recarregar nada aqui.
+      })
+      .catch((err) => {
+        console.error("Erro ao executar ação do assistente:", err);
+        assistenteAdicionarMensagem("Não consegui concluir isso agora. Tenta de novo?", "bot");
+      });
+  }
+
+  if (formAssistente) {
+    formAssistente.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const texto = campoAssistente.value.trim();
+      if (!texto || assistenteOcupado) return;
+
+      assistenteAdicionarMensagem(texto, "user");
+      campoAssistente.value = "";
+      assistenteOcupado = true;
+      const carregando = assistenteAdicionarMensagem("Pensando...", "bot");
+
+      const chamar = window.rotaCertaFunctions.httpsCallable("interpretarComando");
+      chamar({ texto })
+        .then((resultado) => {
+          carregando.remove();
+          const r = resultado.data;
+          if (r.tipo === "confirmacao") {
+            assistenteAdicionarConfirmacao(r.mensagem, r.acao);
+          } else if (r.tipo === "resposta" || r.tipo === "erro") {
+            assistenteAdicionarMensagem(r.mensagem, "bot");
+          } else {
+            assistenteAdicionarMensagem("Não entendi. Pode reformular?", "bot");
+          }
+        })
+        .catch((err) => {
+          carregando.remove();
+          console.error("Erro ao chamar o assistente:", err);
+          // "not-found"/"internal" costumam significar que as Cloud Functions
+          // ainda não foram implantadas (ver IA-SETUP.md) — mensagem
+          // amigável em vez de erro técnico cru.
+          assistenteAdicionarMensagem(
+            "O assistente ainda não está configurado neste projeto (veja IA-SETUP.md) ou está sem conexão.",
+            "bot"
+          );
+        })
+        .finally(() => {
+          assistenteOcupado = false;
+        });
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
    * 13. MODAL DE CONFIRMAÇÃO (Promise-based, reaproveitável)
    * ------------------------------------------------------------------ */
 
@@ -1203,6 +1378,66 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * 15.5 CARD "BAIXE O APP" — aparece na tela de login (antes do login em
+   *    si), detecta a plataforma e mostra o botão certo. Enquanto
+   *    APP_LINKS.android/ios estiverem null (apps ainda não publicados),
+   *    os botões ficam desabilitados com "Em breve" — nunca um link
+   *    inventado. O QR Code sempre aponta para o próprio site (já
+   *    instalável como PWA hoje), então ele já é útil mesmo antes de as
+   *    lojas existirem.
+   * ------------------------------------------------------------------ */
+  (function montarCardDownload() {
+    const CHAVE_DISPENSADO = "frete-na-mao:download-card-fechado";
+    const card = document.getElementById("downloadCard");
+    if (!card) return;
+    if (localStorage.getItem(CHAVE_DISPENSADO)) {
+      card.hidden = true;
+      return;
+    }
+
+    const ua = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+    const plataforma = isAndroid ? "android" : isIOS ? "ios" : "desktop";
+
+    function botaoLoja(tipo, rotulo) {
+      const url = APP_LINKS[tipo];
+      const disabled = !url;
+      return `<button type="button" class="btn-store" data-loja="${tipo}" ${disabled ? "disabled" : ""}>${disabled ? `${rotulo} — em breve` : rotulo}</button>`;
+    }
+
+    const acoes = document.getElementById("downloadCardActions");
+    if (plataforma === "android") {
+      acoes.innerHTML = botaoLoja("android", "Baixar no Google Play");
+    } else if (plataforma === "ios") {
+      acoes.innerHTML = botaoLoja("ios", "Baixar na App Store");
+    } else {
+      acoes.innerHTML = botaoLoja("android", "Android — Google Play") + botaoLoja("ios", "iPhone — App Store");
+      // No computador também mostramos o QR Code: aponta para o próprio
+      // site, que já funciona como app (PWA) hoje, sem depender das lojas.
+      const qrWrap = document.getElementById("downloadCardQr");
+      const qrImg = document.getElementById("downloadQrImg");
+      const urlLimpa = location.origin + location.pathname;
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&qzone=1&data=${encodeURIComponent(urlLimpa)}`;
+      qrWrap.hidden = false;
+    }
+
+    acoes.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-loja]");
+      if (!btn || btn.disabled) return;
+      const url = APP_LINKS[btn.dataset.loja];
+      if (url) window.open(url, "_blank", "noopener");
+    });
+
+    function fechar() {
+      card.hidden = true;
+      localStorage.setItem(CHAVE_DISPENSADO, "1");
+    }
+    document.getElementById("btnFecharDownloadCard").addEventListener("click", fechar);
+    document.getElementById("btnContinuarNoSite").addEventListener("click", fechar);
+  })();
+
+  /* ------------------------------------------------------------------ *
    * 16. LOGIN COM GOOGLE
    *    Enquanto não há usuário logado, a tela de login fica visível e o
    *    restante do app (#appShell) permanece escondido. Assim que o
@@ -1213,6 +1448,18 @@
   document.getElementById("btnLoginGoogle").addEventListener("click", () => {
     const erroEl = document.getElementById("loginError");
     erroEl.textContent = "";
+
+    // Dentro do app Android/iOS (Capacitor), o login pelo navegador embutido
+    // (popup/redirect) não funciona — o Google bloqueia OAuth em WebViews
+    // não confiáveis. Nesse caso usamos o plugin nativo de login do Google,
+    // que devolve um token, e trocamos esse token por uma sessão do
+    // Firebase (signInWithCredential). MESMO usuário, MESMO Firebase — só
+    // o caminho técnico do login muda.
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      loginNativo(erroEl);
+      return;
+    }
+
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch((err) => {
       console.error("Falha no login:", err);
@@ -1223,6 +1470,31 @@
       }
     });
   });
+
+  /** Login pelo plugin nativo @capacitor-firebase/authentication, usado só
+   *  dentro do app Android/iOS gerado pelo Capacitor (ver
+   *  CAPACITOR-SETUP.md — este plugin precisa estar instalado e
+   *  configurado com o google-services.json / GoogleService-Info.plist do
+   *  MESMO projeto Firebase já usado pelo site, para cair na mesma conta e
+   *  nos mesmos dados). */
+  function loginNativo(erroEl) {
+    const FirebaseAuthentication = window.FirebaseAuthentication;
+    if (!FirebaseAuthentication) {
+      erroEl.textContent = "Plugin de login nativo não encontrado. Veja CAPACITOR-SETUP.md.";
+      return;
+    }
+    FirebaseAuthentication.signInWithGoogle()
+      .then((resultado) => {
+        const idToken = resultado.credential && resultado.credential.idToken;
+        if (!idToken) throw new Error("Token do Google não retornado pelo plugin nativo.");
+        const credential = firebase.auth.GoogleAuthProvider.credential(idToken);
+        return auth.signInWithCredential(credential);
+      })
+      .catch((err) => {
+        console.error("Falha no login nativo:", err);
+        erroEl.textContent = "Não foi possível entrar. Tente novamente.";
+      });
+  }
 
   auth.onAuthStateChanged((user) => {
     if (user) {
@@ -1262,12 +1534,67 @@
   });
 
   /* ------------------------------------------------------------------ *
-   * 17. PWA — REGISTRO DO SERVICE WORKER (uso offline)
+   * 17. PWA — REGISTRO DO SERVICE WORKER (uso offline) E ATUALIZAÇÃO
+   *    SEGURA: quando existe uma versão nova dos arquivos do app, avisa a
+   *    pessoa e só troca de versão quando ela confirma — nunca troca o
+   *    código sozinho no meio de um cadastro. Isso NUNCA mexe nos dados
+   *    (Firestore/login), só no cache dos arquivos (html/css/js).
    * ------------------------------------------------------------------ */
 
+  const VERSAO_APP = "2.1.0";
+
+  function mostrarAvisoNovaVersao(registration) {
+    const banner = document.getElementById("avisoNovaVersao");
+    if (!banner || banner.dataset.mostrado === "1") return;
+    banner.dataset.mostrado = "1";
+    banner.hidden = false;
+
+    document.getElementById("btnAtualizarAgora").addEventListener("click", () => {
+      const sw = registration.waiting;
+      if (!sw) return;
+      sw.postMessage({ type: "SKIP_WAITING" });
+    });
+
+    document.getElementById("btnAdiarAtualizacao").addEventListener("click", () => {
+      banner.hidden = true;
+    });
+  }
+
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    let jaRecarregou = false;
+    // Quando a nova versão assume o controle, recarrega a página UMA vez
+    // para carregar os arquivos novos. Os dados (Firestore/login) não são
+    // afetados por esse recarregamento.
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (jaRecarregou) return;
+      jaRecarregou = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Service worker não registrado:", e));
+      navigator.serviceWorker
+        .register("sw.js")
+        .then((registration) => {
+          // Caso já exista uma versão nova esperando (ex.: a pessoa abriu
+          // o app, uma aba antiga instalou a atualização, e essa aba abriu
+          // depois).
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            mostrarAvisoNovaVersao(registration);
+          }
+          registration.addEventListener("updatefound", () => {
+            const novoWorker = registration.installing;
+            if (!novoWorker) return;
+            novoWorker.addEventListener("statechange", () => {
+              // "installed" + já existe um controller = havia uma versão
+              // anterior rodando, ou seja, isso é uma ATUALIZAÇÃO (não a
+              // primeira instalação do app).
+              if (novoWorker.state === "installed" && navigator.serviceWorker.controller) {
+                mostrarAvisoNovaVersao(registration);
+              }
+            });
+          });
+        })
+        .catch((e) => console.warn("Service worker não registrado:", e));
     });
   }
 })();
