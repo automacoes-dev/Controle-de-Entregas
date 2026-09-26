@@ -21,10 +21,27 @@
   ⚠️ Você abriu este arquivo direto do aparelho (sem estar hospedado num link). O login com Google e o salvamento na nuvem só funcionam quando o site está publicado num endereço https://. Veja o arquivo <strong>README.md</strong> para o passo a passo (é rápido e gratuito).
 </div>
 
+<!-- ======================= AVISO: NOVA VERSÃO DISPONÍVEL ======================= -->
+<div id="avisoNovaVersao" class="update-banner" hidden>
+  <span>🚀 Nova versão do Frete na Mão disponível.</span>
+  <div class="update-banner-actions">
+    <button type="button" id="btnAtualizarAgora" class="btn-update">Atualizar agora</button>
+    <button type="button" id="btnAdiarAtualizacao" class="btn-update-dismiss" aria-label="Adiar">Depois</button>
+  </div>
+</div>
+
 <!-- ======================= TELA DE LOGIN ======================= -->
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
-    <span class="brand-mark brand-mark-lg" aria-hidden="true"></span>
+    <span class="brand-mark brand-mark-lg" aria-hidden="true">
+      <svg viewBox="0 0 48 32" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="8" width="27" height="16" rx="2" fill="currentColor"/>
+        <path d="M28 13h9l7 7v4h-16z" fill="currentColor" opacity="0.85"/>
+        <circle cx="12" cy="27" r="4" fill="var(--bg)" stroke="currentColor" stroke-width="2.5"/>
+        <circle cx="36" cy="27" r="4" fill="var(--bg)" stroke="currentColor" stroke-width="2.5"/>
+        <rect x="32" y="16" width="5" height="5" rx="1" fill="var(--bg)"/>
+      </svg>
+    </span>
     <h1 class="login-title">Frete na Mão</h1>
     <p class="login-subtitle">Controle de entregas e recebimentos por quinzena.</p>
     <button id="btnLoginGoogle" class="btn-google">
@@ -33,6 +50,21 @@
     </button>
     <p class="login-hint" id="loginError"></p>
     <p class="login-privacy">Seus lançamentos ficam vinculados à sua conta Google — outras pessoas que usarem este mesmo link, com outra conta, não conseguem ver os seus dados.</p>
+  </div>
+
+  <!-- Card "Baixe o app" — aparece também na tela de login, sem popup invasivo -->
+  <div class="download-card" id="downloadCard">
+    <button type="button" class="download-card-close" id="btnFecharDownloadCard" aria-label="Fechar">✕</button>
+    <p class="download-card-title">Baixe também o Frete na Mão</p>
+    <p class="download-card-text">Tenha seus registros, entregas e resultados sempre com você.</p>
+    <div class="download-card-actions" id="downloadCardActions">
+      <!-- Preenchido via JS conforme a plataforma (Android/iOS/computador) -->
+    </div>
+    <div class="download-card-qr" id="downloadCardQr" hidden>
+      <img id="downloadQrImg" alt="QR Code para abrir o Frete na Mão no celular">
+      <span>Aponte a câmera do celular para instalar</span>
+    </div>
+    <button type="button" class="download-card-skip" id="btnContinuarNoSite">Continuar no site</button>
   </div>
 </div>
 
@@ -43,7 +75,15 @@
 <header class="app-header">
   <div class="header-inner">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 32" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="8" width="27" height="16" rx="2" fill="currentColor"/>
+          <path d="M28 13h9l7 7v4h-16z" fill="currentColor" opacity="0.85"/>
+          <circle cx="12" cy="27" r="4" fill="var(--bg)" stroke="currentColor" stroke-width="2.5"/>
+          <circle cx="36" cy="27" r="4" fill="var(--bg)" stroke="currentColor" stroke-width="2.5"/>
+          <rect x="32" y="16" width="5" height="5" rx="1" fill="var(--bg)"/>
+        </svg>
+      </span>
       <span class="brand-name">Frete na Mão</span>
     </div>
 
@@ -60,6 +100,9 @@
       </button>
       <button class="nav-btn" data-target="historico">
         <span class="nav-icon">🗓️</span><span>Histórico</span>
+      </button>
+      <button class="nav-btn" data-target="assistente">
+        <span class="nav-icon">🤖</span><span>Assistente</span>
       </button>
       <button class="nav-btn" data-target="config">
         <span class="nav-icon">⚙️</span><span>Ajustes</span>
@@ -131,22 +174,22 @@
       <div class="kpi-card">
         <span class="kpi-icon">📦</span>
         <span class="kpi-label">Valor bruto</span>
-        <span class="kpi-value" id="kpiBruto">R$ 0,00</span>
+        <span class="kpi-value valor-bruto" id="kpiBruto">R$ 0,00</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-icon">📊</span>
         <span class="kpi-label">Percentual médio</span>
-        <span class="kpi-value" id="kpiPercentual">0%</span>
+        <span class="kpi-value valor-percentual" id="kpiPercentual">0%</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-icon">⛽</span>
         <span class="kpi-label">Gastos da viagem</span>
-        <span class="kpi-value" id="kpiGastos">R$ 0,00</span>
+        <span class="kpi-value valor-gastos" id="kpiGastos">R$ 0,00</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-icon">🏁</span>
         <span class="kpi-label">Líquido após gastos</span>
-        <span class="kpi-value" id="kpiLiquidoAposGastos">R$ 0,00</span>
+        <span class="kpi-value valor-liquido-apos-gastos" id="kpiLiquidoAposGastos">R$ 0,00</span>
       </div>
     </div>
 
@@ -185,54 +228,59 @@
       </div>
       <div class="total-item">
         <span>Total bruto</span>
-        <strong id="totalBruto">R$ 0,00</strong>
+        <strong id="totalBruto" class="valor-bruto">R$ 0,00</strong>
       </div>
       <div class="total-item total-item-highlight">
         <span>Total líquido previsto</span>
-        <strong id="totalLiquido">R$ 0,00</strong>
+        <strong id="totalLiquido" class="valor-liquido">R$ 0,00</strong>
       </div>
       <div class="total-item">
         <span>Total de gastos</span>
-        <strong id="totalGastos">R$ 0,00</strong>
+        <strong id="totalGastos" class="valor-gastos">R$ 0,00</strong>
       </div>
       <div class="total-item total-item-highlight">
         <span>Líquido após gastos</span>
-        <strong id="totalLiquidoAposGastos">R$ 0,00</strong>
+        <strong id="totalLiquidoAposGastos" class="valor-liquido-apos-gastos">R$ 0,00</strong>
       </div>
       <div class="total-item">
         <span>Média líquida / entrega</span>
-        <strong id="totalMedia">R$ 0,00</strong>
+        <strong id="totalMedia" class="valor-liquido">R$ 0,00</strong>
+      </div>
+      <div class="total-item">
+        <span>Total em adicionais</span>
+        <strong id="totalAdicionais" class="valor-liquido">R$ 0,00</strong>
       </div>
     </div>
 
     <!-- Detalhamento de gastos -->
     <h2 class="section-title">Detalhamento de gastos</h2>
     <div class="gastos-grid">
-      <div class="gasto-item"><span>⛽ Diesel</span><strong id="gastoDiesel">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🛣️ Pedágio</span><strong id="gastoPedagio">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🍽️ Alimentação</span><strong id="gastoAlimentacao">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🅿️ Estacionamento</span><strong id="gastoEstacionamento">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>📎 Outros</span><strong id="gastoOutros">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🧑‍🤝‍🧑 Ajudante</span><strong id="gastoAjudante">R$ 0,00</strong></div>
-      <div class="gasto-item gasto-item-destaque"><span>Total de gastos</span><strong id="gastoTotalDetalhe">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>⛽ Diesel</span><strong id="gastoDiesel" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🛣️ Pedágio</span><strong id="gastoPedagio" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🍽️ Alimentação</span><strong id="gastoAlimentacao" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🅿️ Estacionamento</span><strong id="gastoEstacionamento" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>📎 Outros</span><strong id="gastoOutros" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item"><span>🧑‍🤝‍🧑 Ajudante</span><strong id="gastoAjudante" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item gasto-item-destaque"><span>Total de gastos</span><strong id="gastoTotalDetalhe" class="valor-gastos">R$ 0,00</strong></div>
     </div>
 
     <!-- Gráficos -->
     <h2 class="section-title">Gráficos</h2>
-    <div class="chart-card">
+    <div class="chart-card" style="position:relative;">
       <div class="chart-head">
         <span>Líquido por dia</span>
       </div>
       <canvas id="chartDia" height="180"></canvas>
       <p class="chart-empty" id="chartDiaEmpty">Sem lançamentos no período.</p>
     </div>
-    <div class="chart-card">
+    <div class="chart-card" style="position:relative;">
       <div class="chart-head">
         <span>1ª quinzena × 2ª quinzena (líquido)</span>
       </div>
       <canvas id="chartQuinzena" height="140"></canvas>
       <p class="chart-empty" id="chartQuinzenaEmpty">Sem lançamentos no período.</p>
     </div>
+    <div id="chartTooltip" class="chart-tooltip" hidden></div>
 
   </section>
 
@@ -275,6 +323,15 @@
         <input type="text" inputmode="decimal" id="campoLiquido" placeholder="0,00" required>
       </div>
 
+      <div class="form-field">
+        <label for="campoAdicionaisDescricao">Adicionais (opcional)</label>
+        <input type="text" id="campoAdicionaisDescricao" placeholder="Ex.: Coleta, descarga, carga extra...">
+      </div>
+      <div class="form-field">
+        <label for="campoAdicionaisValor">Valor dos adicionais (R$)</label>
+        <input type="text" inputmode="decimal" id="campoAdicionaisValor" placeholder="0,00">
+      </div>
+
       <h3 class="form-section-title">Gastos da viagem (opcional)</h3>
 
       <div class="form-field">
@@ -310,7 +367,7 @@
       <div class="form-summary">
         <div class="form-summary-row">
           <span>Total de gastos</span>
-          <strong id="resumoTotalGastos">R$ 0,00</strong>
+          <strong id="resumoTotalGastos" class="valor-gastos">R$ 0,00</strong>
         </div>
         <div class="form-summary-row form-summary-row-destaque">
           <span>Líquido após gastos</span>
@@ -454,8 +511,26 @@
     <div class="config-block">
       <h3>Sobre</h3>
       <p>Frete na Mão. Seus dados ficam vinculados à sua conta Google — cada pessoa enxerga só os próprios lançamentos.</p>
+      <p class="config-storage-info" id="versaoApp"></p>
       <p class="config-storage-info" id="storageInfo"></p>
     </div>
+  </section>
+
+  <!-- ---------- VIEW: ASSISTENTE IA ---------- -->
+  <section id="view-assistente" class="view" data-view="assistente" hidden>
+    <h2 class="page-title">Assistente Frete na Mão</h2>
+    <p class="assistente-intro">Fale em linguagem natural — ele só enxerga os seus próprios dados, nunca os de outra conta. Antes de cadastrar ou alterar algo, sempre pede confirmação.</p>
+
+    <div id="assistenteChat" class="assistente-chat" aria-live="polite">
+      <div class="assistente-msg assistente-msg-bot">
+        <p>Oi! Você pode pedir coisas como: <em>"cadastre hoje uma entrega de R$ 5.000 com 23%"</em>, <em>"adicione R$ 200 de diesel nessa entrega"</em> ou <em>"quanto ganhei líquido este mês?"</em></p>
+      </div>
+    </div>
+
+    <form id="formAssistente" class="assistente-form">
+      <input type="text" id="campoAssistente" placeholder="Escreva sua mensagem..." autocomplete="off">
+      <button type="submit" class="btn-primary" id="btnEnviarAssistente">Enviar</button>
+    </form>
   </section>
 
 </main>
@@ -476,6 +551,9 @@
   </button>
   <button class="nav-btn" data-target="config">
     <span class="nav-icon">⚙️</span><span>Ajustes</span>
+  </button>
+  <button class="nav-btn" data-target="assistente">
+    <span class="nav-icon">🤖</span><span>IA</span>
   </button>
 </nav>
 
@@ -503,6 +581,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-functions-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 </body>
