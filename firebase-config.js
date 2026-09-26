@@ -23,6 +23,9 @@ firebase.initializeApp(firebaseConfig);
 // Deixa auth e db acessíveis para o app.js (que não usa módulos ES).
 window.rotaCertaAuth = firebase.auth();
 window.rotaCertaDb = firebase.firestore();
+// Funções do Assistente de IA (Cloud Functions) — região precisa bater com
+// a usada em functions/index.js (southamerica-east1).
+window.rotaCertaFunctions = firebase.app().functions("southamerica-east1");
 
 // Permite que o app funcione offline (cache local automático do Firestore),
 // sincronizando sozinho assim que a internet voltar.
