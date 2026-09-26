@@ -5,7 +5,7 @@
    que não passa pelo service worker.
    ========================================================================== */
 
-const CACHE_NAME = "frete-na-mao-v2";
+const CACHE_NAME = "frete-na-mao-v3";
 
 const ARQUIVOS_PARA_CACHE = [
   "./",
@@ -22,7 +22,17 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ARQUIVOS_PARA_CACHE)).catch(() => {})
   );
-  self.skipWaiting();
+  // NÃO chama self.skipWaiting() aqui de propósito: a nova versão fica
+  // "esperando" até a pessoa clicar em "Atualizar agora" no aviso que o
+  // app mostra (ver mensagem SKIP_WAITING abaixo). Isso evita trocar o
+  // código debaixo dos pés de alguém no meio de um cadastro.
+});
+
+// A página envia essa mensagem quando a pessoa confirma a atualização.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
