@@ -849,8 +849,10 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow-x: hidden;
   padding: 24px;
   padding-top: calc(24px + env(safe-area-inset-top));
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
@@ -1385,6 +1387,17 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   50% { opacity: 1; }
 }
 .login-box, .landing-hero, .landing-benefits { position: relative; z-index: 1; }
+
+.landing-hero {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: 24px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .landing-road-glow { animation: none; }
