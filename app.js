@@ -459,7 +459,26 @@
     return `${mesTxt} / ${anoTxt}`;
   }
 
+  /** Como el(), mas nunca quebra o resto da tela se o elemento não existir
+   *  (ex.: página aberta com uma versão de HTML mais antiga que o app.js).
+   *  fn só roda se o elemento for encontrado. */
+  function comElOpt(id, fn) {
+    const elemento = document.getElementById(id);
+    if (elemento) fn(elemento);
+  }
+
   function renderDashboard() {
+    try {
+      renderDashboardInterno();
+    } catch (err) {
+      // Uma falha aqui é só de EXIBIÇÃO — os dados no Firestore continuam
+      // intactos. Registramos o erro para investigar, mas nunca deixamos
+      // isso travar o app inteiro nem parecer perda de dados.
+      console.error("Falha ao renderizar o painel (dados não foram afetados):", err);
+    }
+  }
+
+  function renderDashboardInterno() {
     const lista = listaFiltrada();
     const r = calcularResumo(lista);
 
@@ -473,10 +492,13 @@
     animarNumero("kpiLiquidoAposGastos", r.liquidoAposGastos, formatCurrency);
 
     // Indicador circular do percentual médio (0% a 100%+ visualmente
-    // limitado ao anel — o número exato continua no texto acima).
-    const circunferencia = 169.6; // 2 * PI * 27 (raio do círculo no SVG)
-    const fracaoPreenchida = Math.max(0, Math.min(1, r.percMedio / 100));
-    el("gaugePercentual").style.strokeDashoffset = String(circunferencia * (1 - fracaoPreenchida));
+    // limitado ao anel — o número exato continua no texto acima). Só roda
+    // se o anel existir no HTML (ver comElOpt acima).
+    comElOpt("gaugePercentual", (gauge) => {
+      const circunferencia = 169.6; // 2 * PI * 27 (raio do círculo no SVG)
+      const fracaoPreenchida = Math.max(0, Math.min(1, r.percMedio / 100));
+      gauge.style.strokeDashoffset = String(circunferencia * (1 - fracaoPreenchida));
+    });
 
     // Faixas de dias das quinzenas (mostra datas completas se um mês específico
     // estiver selecionado; caso contrário mostra apenas os dias genéricos).
@@ -515,7 +537,7 @@
 
     // Mini-barras: cada categoria mostra sua proporção dentro do total de
     // gastos do período filtrado (0% se não houver gasto nenhum, para não
-    // dividir por zero).
+    // dividir por zero). Cada uma só é atualizada se existir no HTML.
     const maiorCategoria = r.totalGastos || 1;
     const barras = {
       gastoBarDiesel: r.diesel,
@@ -527,7 +549,9 @@
     };
     Object.entries(barras).forEach(([id, valor]) => {
       const pct = r.totalGastos ? Math.min(100, (valor / maiorCategoria) * 100) : 0;
-      el(id).style.width = `${pct}%`;
+      comElOpt(id, (barra) => {
+        barra.style.width = `${pct}%`;
+      });
     });
 
     renderGraficoDiario(lista);
