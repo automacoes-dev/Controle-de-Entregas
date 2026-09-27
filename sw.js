@@ -5,7 +5,7 @@
    que não passa pelo service worker.
    ========================================================================== */
 
-const CACHE_NAME = "frete-na-mao-v3";
+const CACHE_NAME = "frete-na-mao-v4";
 
 const ARQUIVOS_PARA_CACHE = [
   "./",
