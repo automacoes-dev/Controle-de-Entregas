@@ -108,7 +108,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .brand-mark {
   width: 30px;
   height: 20px;
-  color: var(--yellow);
+  color: var(--blue-light);
   display: inline-flex;
   flex-shrink: 0;
 }
@@ -119,16 +119,20 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   font-weight: 600;
   font-size: 19px;
   letter-spacing: 0.01em;
+  background: linear-gradient(90deg, var(--blue-light), #FFFFFF 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .header-period {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 15px;
-  color: var(--yellow);
+  color: var(--blue-light);
   letter-spacing: 0.06em;
   padding: 5px 10px;
-  border: 1px solid rgba(245,183,0,0.35);
+  border: 1px solid rgba(125,211,252,0.35);
   border-radius: 999px;
 }
 
@@ -199,7 +203,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 }
 
 .filter-field select:focus-visible {
-  outline: 2px solid var(--yellow);
+  outline: 2px solid var(--blue-light);
   outline-offset: 1px;
 }
 
@@ -286,7 +290,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 15px;
-  color: var(--yellow);
+  color: var(--blue-light);
 }
 
 .quinzena-range { font-size: 11.5px; color: var(--text-faint); }
@@ -303,7 +307,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 
 .quinzena-row strong { color: var(--text); font-weight: 600; font-size: 14px; }
 
-.quinzena-highlight strong { color: var(--yellow); font-size: 15px; }
+.quinzena-highlight strong { font-size: 15px; }
+.quinzena-highlight strong:not([class*="valor-"]) { color: var(--green); }
 
 /* ---------------------------------------------------------------------- */
 /* TOTAL DO MÊS                                                            */
@@ -398,9 +403,9 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 }
 
 .form-field input:focus-visible {
-  outline: 2px solid var(--yellow);
+  outline: 2px solid var(--blue-light);
   outline-offset: 1px;
-  border-color: var(--yellow);
+  border-color: var(--blue-light);
 }
 
 .data-row { display: flex; gap: 8px; }
@@ -410,7 +415,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   display: block;
   margin-top: 7px;
   font-size: 12.5px;
-  color: var(--yellow);
+  color: var(--blue-light);
   font-weight: 600;
   min-height: 15px;
 }
@@ -452,8 +457,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 }
 
 .btn-primary {
-  background: var(--yellow);
-  color: #1A1300;
+  background: var(--blue-strong);
+  color: #FFFFFF;
   flex: 1;
 }
 
@@ -472,7 +477,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .btn-ghost {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  color: var(--yellow);
+  color: var(--blue-light);
   padding: 0 16px;
   min-height: 48px;
 }
@@ -531,7 +536,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   color: var(--text-dim);
 }
 .tag-quinzena.q1 { color: var(--green); background: var(--green-soft); }
-.tag-quinzena.q2 { color: var(--yellow); background: var(--yellow-soft); }
+.tag-quinzena.q2 { color: var(--blue-light); background: var(--blue-light-soft); }
 
 .row-actions { display: flex; gap: 6px; }
 .row-actions button {
@@ -624,7 +629,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 }
 .historico-sub { font-size: 12.5px; color: var(--text-faint); margin-top: 2px; }
 .historico-valor { text-align: right; }
-.historico-valor strong { display: block; color: var(--yellow); font-family: var(--font-display); font-size: 18px; }
+.historico-valor strong { display: block; font-family: var(--font-display); font-size: 18px; }
+.historico-valor strong:not([class*="valor-"]) { color: var(--green); }
 .historico-valor span { font-size: 11.5px; color: var(--text-faint); }
 
 /* ---------------------------------------------------------------------- */
@@ -690,12 +696,12 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom, 0));
   width: 56px; height: 56px;
   border-radius: 50%;
-  background: var(--yellow);
-  color: #1A1300;
+  background: var(--blue-strong);
+  color: #FFFFFF;
   font-size: 28px;
   font-weight: 600;
   border: none;
-  box-shadow: 0 8px 20px rgba(245,183,0,0.35);
+  box-shadow: 0 8px 20px rgba(14,165,233,0.35);
   cursor: pointer;
   z-index: 41;
   display: flex;
@@ -839,6 +845,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 
 /* ======================= TELA DE LOGIN ======================= */
 .login-screen {
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
@@ -869,8 +876,11 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .login-title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 34px;
-  color: var(--text);
+  font-size: 40px;
+  background: linear-gradient(90deg, var(--blue-light), #FFFFFF 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   margin: 0;
 }
 
@@ -1248,4 +1258,198 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   box-shadow: 0 4px 14px rgba(0,0,0,0.35);
   white-space: nowrap;
 }
-.chart-tooltip strong { color: var(--yellow); }
+.chart-tooltip strong { color: var(--blue-light); }
+
+/* ======================= LANDING: BENEFÍCIOS + PRÉVIA ======================= */
+.landing-benefits {
+  max-width: 720px;
+  margin: 8px auto 0;
+  padding: 8px 24px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.landing-benefits-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.benefit-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.benefit-card .benefit-icon { font-size: 22px; }
+.benefit-card strong { font-size: 15px; color: var(--text); }
+.benefit-card p { margin: 0; font-size: 13.5px; color: var(--text-dim); line-height: 1.5; }
+
+.landing-demo {
+  width: 100%;
+  background: linear-gradient(160deg, var(--blue-light-soft), var(--surface) 65%);
+  border: 1px solid rgba(125,211,252,0.25);
+  border-radius: var(--radius-l);
+  padding: 18px;
+  text-align: center;
+}
+.landing-demo-badge {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin-bottom: 14px;
+}
+.landing-demo-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.landing-demo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.landing-demo-card span { font-size: 10.5px; color: var(--text-faint); }
+.landing-demo-card strong { font-family: var(--font-display); font-size: 17px; }
+
+.landing-cta { max-width: 320px; }
+
+/* Elementos que "surgem" ao entrar na tela (IntersectionObserver adiciona
+   .is-visible via JS). Sem JS ou com movimento reduzido, ficam visíveis
+   direto — nunca dependem de animação para o conteúdo aparecer. */
+.reveal {
+  opacity: 1;
+  transform: none;
+}
+.js-reveal-ativo .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.js-reveal-ativo .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (min-width: 640px) {
+  .landing-benefits-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal-ativo .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ======================= LANDING: TAGLINE + ESTRADA ======================= */
+.landing-tagline {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--blue-light);
+  margin: -8px 0 2px;
+  font-weight: 600;
+}
+
+.landing-road {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.landing-road-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140vw;
+  height: 140vw;
+  max-width: 900px;
+  max-height: 900px;
+  transform: translate(-50%, -55%);
+  background: radial-gradient(circle, var(--blue-light-soft) 0%, transparent 60%);
+  animation: road-glow-pulse 6s ease-in-out infinite;
+}
+@keyframes road-glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.login-box, .landing-hero, .landing-benefits { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-road-glow { animation: none; }
+}
+
+/* ======================= PERCENTUAL: INDICADOR CIRCULAR ======================= */
+.kpi-gauge-card { align-items: center; text-align: center; }
+.kpi-gauge {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-top: 4px;
+}
+.kpi-gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.kpi-gauge-track {
+  fill: none;
+  stroke: var(--surface-2);
+  stroke-width: 6;
+}
+.kpi-gauge-fill {
+  fill: none;
+  stroke: var(--blue-light);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 169.6; /* 2 * PI * 27 */
+  stroke-dashoffset: 169.6;
+  transition: stroke-dashoffset 0.6s ease-out;
+}
+.kpi-gauge-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px !important;
+}
+
+/* ======================= GASTOS: MINI-BARRAS ======================= */
+.gasto-bar-track {
+  width: 100%;
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.gasto-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--red);
+  border-radius: 2px;
+  transition: width 0.6s ease-out;
+}
+
+/* ======================= FEEDBACK DE TOQUE (mobile) ======================= */
+.kpi-card:active, .entrega-card:active, .gasto-item:active, .quinzena-card:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+.nav-btn:active { transform: scale(0.92); }
+.nav-btn { transition: transform 0.12s ease, color 0.15s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card:active, .entrega-card:active, .gasto-item:active, .quinzena-card:active,
+  .nav-btn:active {
+    transform: none;
+  }
+}
