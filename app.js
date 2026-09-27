@@ -472,6 +472,12 @@
     animarNumero("kpiGastos", r.totalGastos, formatCurrency);
     animarNumero("kpiLiquidoAposGastos", r.liquidoAposGastos, formatCurrency);
 
+    // Indicador circular do percentual médio (0% a 100%+ visualmente
+    // limitado ao anel — o número exato continua no texto acima).
+    const circunferencia = 169.6; // 2 * PI * 27 (raio do círculo no SVG)
+    const fracaoPreenchida = Math.max(0, Math.min(1, r.percMedio / 100));
+    el("gaugePercentual").style.strokeDashoffset = String(circunferencia * (1 - fracaoPreenchida));
+
     // Faixas de dias das quinzenas (mostra datas completas se um mês específico
     // estiver selecionado; caso contrário mostra apenas os dias genéricos).
     if (filtro.mes !== "todos" && filtro.ano !== "todos") {
@@ -506,6 +512,23 @@
     el("gastoOutros").textContent = formatCurrency(r.outrosGastos);
     el("gastoAjudante").textContent = formatCurrency(r.ajudante);
     el("gastoTotalDetalhe").textContent = formatCurrency(r.totalGastos);
+
+    // Mini-barras: cada categoria mostra sua proporção dentro do total de
+    // gastos do período filtrado (0% se não houver gasto nenhum, para não
+    // dividir por zero).
+    const maiorCategoria = r.totalGastos || 1;
+    const barras = {
+      gastoBarDiesel: r.diesel,
+      gastoBarPedagio: r.pedagio,
+      gastoBarAlimentacao: r.alimentacao,
+      gastoBarEstacionamento: r.estacionamento,
+      gastoBarOutros: r.outrosGastos,
+      gastoBarAjudante: r.ajudante,
+    };
+    Object.entries(barras).forEach(([id, valor]) => {
+      const pct = r.totalGastos ? Math.min(100, (valor / maiorCategoria) * 100) : 0;
+      el(id).style.width = `${pct}%`;
+    });
 
     renderGraficoDiario(lista);
     renderGraficoQuinzena(r);
@@ -1014,7 +1037,7 @@
               <div class="historico-sub">${r.qtd} entrega${r.qtd === 1 ? "" : "s"} · bruto ${formatCurrency(r.bruto)}</div>
             </div>
             <div class="historico-valor">
-              <strong>${formatCurrency(r.liquido)}</strong>
+              <strong class="valor-liquido">${formatCurrency(r.liquido)}</strong>
               <span>líquido previsto</span>
             </div>
           </button>`;
@@ -1436,6 +1459,70 @@
     document.getElementById("btnFecharDownloadCard").addEventListener("click", fechar);
     document.getElementById("btnContinuarNoSite").addEventListener("click", fechar);
   })();
+
+  /* ------------------------------------------------------------------ *
+   * 15.6 LANDING (pré-login) — revelação suave ao rolar e botão "Começar
+   *    agora". Roda imediatamente (não espera login, já que é a própria
+   *    tela de antes do login). Respeita prefers-reduced-motion: se a
+   *    pessoa pediu menos movimento no aparelho, tudo já aparece visível,
+   *    sem animação nenhuma.
+   * ------------------------------------------------------------------ */
+
+  (function iniciarLanding() {
+    const reduzMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const elementosReveal = document.querySelectorAll(".reveal");
+
+    if (!reduzMovimento && "IntersectionObserver" in window && elementosReveal.length) {
+      document.documentElement.classList.add("js-reveal-ativo");
+      const observador = new IntersectionObserver(
+        (entradas) => {
+          entradas.forEach((entrada) => {
+            if (entrada.isIntersecting) {
+              entrada.target.classList.add("is-visible");
+              observador.unobserve(entrada.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      elementosReveal.forEach((elemento) => observador.observe(elemento));
+    }
+
+    const botaoComecar = document.querySelector("[data-scroll-to-login]");
+    if (botaoComecar) {
+      botaoComecar.addEventListener("click", () => {
+        document.getElementById("loginScreen").scrollIntoView({
+          behavior: reduzMovimento ? "auto" : "smooth",
+          block: "start",
+        });
+        document.getElementById("btnLoginGoogle").focus({ preventScroll: true });
+      });
+    }
+  })();
+
+  /** Anima um número subindo até o valor final (efeito "contador"). Não
+   *  inventa dado nenhum — só anima visualmente até o valor REAL já
+   *  calculado. Pulado inteiramente se a pessoa reduziu animações. */
+  const _reduzMovimentoNumeros = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function animarNumero(elemento, valorFinal, formatador) {
+    if (_reduzMovimentoNumeros || typeof valorFinal !== "number" || !isFinite(valorFinal)) {
+      elemento.textContent = formatador(valorFinal);
+      return;
+    }
+    const duracaoMs = 500;
+    const valorInicial = Number(elemento.dataset.valorAnimado) || 0;
+    elemento.dataset.valorAnimado = String(valorFinal);
+    const inicio = performance.now();
+    function passo(agora) {
+      const progresso = Math.min(1, (agora - inicio) / duracaoMs);
+      // easeOutQuad — desacelera no final, fica mais natural que linear.
+      const suavizado = 1 - (1 - progresso) * (1 - progresso);
+      const valorAtual = valorInicial + (valorFinal - valorInicial) * suavizado;
+      elemento.textContent = formatador(valorAtual);
+      if (progresso < 1) requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
+  }
 
   /* ------------------------------------------------------------------ *
    * 16. LOGIN COM GOOGLE
