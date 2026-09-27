@@ -1524,30 +1524,6 @@
     }
   })();
 
-  /** Anima um número subindo até o valor final (efeito "contador"). Não
-   *  inventa dado nenhum — só anima visualmente até o valor REAL já
-   *  calculado. Pulado inteiramente se a pessoa reduziu animações. */
-  const _reduzMovimentoNumeros = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function animarNumero(elemento, valorFinal, formatador) {
-    if (_reduzMovimentoNumeros || typeof valorFinal !== "number" || !isFinite(valorFinal)) {
-      elemento.textContent = formatador(valorFinal);
-      return;
-    }
-    const duracaoMs = 500;
-    const valorInicial = Number(elemento.dataset.valorAnimado) || 0;
-    elemento.dataset.valorAnimado = String(valorFinal);
-    const inicio = performance.now();
-    function passo(agora) {
-      const progresso = Math.min(1, (agora - inicio) / duracaoMs);
-      // easeOutQuad — desacelera no final, fica mais natural que linear.
-      const suavizado = 1 - (1 - progresso) * (1 - progresso);
-      const valorAtual = valorInicial + (valorFinal - valorInicial) * suavizado;
-      elemento.textContent = formatador(valorAtual);
-      if (progresso < 1) requestAnimationFrame(passo);
-    }
-    requestAnimationFrame(passo);
-  }
-
   /* ------------------------------------------------------------------ *
    * 16. LOGIN COM GOOGLE
    *    Enquanto não há usuário logado, a tela de login fica visível e o
