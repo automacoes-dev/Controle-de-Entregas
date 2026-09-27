@@ -32,6 +32,7 @@
 
 <!-- ======================= TELA DE LOGIN ======================= -->
 <div id="loginScreen" class="login-screen">
+  <div class="landing-road" aria-hidden="true"><span class="landing-road-glow"></span></div>
   <div class="login-box">
     <span class="brand-mark brand-mark-lg" aria-hidden="true">
       <svg viewBox="0 0 48 32" xmlns="http://www.w3.org/2000/svg">
@@ -43,6 +44,7 @@
       </svg>
     </span>
     <h1 class="login-title">Frete na Mão</h1>
+    <p class="landing-tagline">Seus fretes. Seus ganhos. Sua evolução.</p>
     <p class="login-subtitle">Controle de entregas e recebimentos por quinzena.</p>
     <button id="btnLoginGoogle" class="btn-google">
       <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.5 35.1 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.9 39.8 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.1 5.7l6.5 5.5C41.5 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
@@ -51,6 +53,52 @@
     <p class="login-hint" id="loginError"></p>
     <p class="login-privacy">Seus lançamentos ficam vinculados à sua conta Google — outras pessoas que usarem este mesmo link, com outra conta, não conseguem ver os seus dados.</p>
   </div>
+
+  <!-- ======================= APRESENTAÇÃO (benefícios) ======================= -->
+  <section class="landing-benefits" aria-label="O que é o Frete na Mão">
+    <div class="reveal landing-benefits-grid">
+      <div class="benefit-card">
+        <span class="benefit-icon">📦</span>
+        <strong>Toda entrega, num só lugar</strong>
+        <p>Registre data, cidade, valor e percentual em segundos — o app calcula o resto.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-icon">💰</span>
+        <strong>Ganhos e gastos separados</strong>
+        <p>Diesel, pedágio, alimentação e outros gastos descontados automaticamente do líquido.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-icon">📊</span>
+        <strong>Sua evolução, visível</strong>
+        <p>Filtre por mês, quinzena ou cidade e acompanhe como seu trabalho está rendendo.</p>
+      </div>
+      <div class="benefit-card">
+        <span class="benefit-icon">🤖</span>
+        <strong>Um assistente que entende você</strong>
+        <p>Registre entregas e consulte seus números só de conversar, em português.</p>
+      </div>
+    </div>
+
+    <div class="reveal landing-demo" aria-hidden="true">
+      <span class="landing-demo-badge">Exemplo ilustrativo — não são dados reais</span>
+      <div class="landing-demo-cards">
+        <div class="landing-demo-card">
+          <span>Líquido previsto</span>
+          <strong class="valor-liquido">R$ 26.820,72</strong>
+        </div>
+        <div class="landing-demo-card">
+          <span>Entregas</span>
+          <strong class="valor-bruto">14</strong>
+        </div>
+        <div class="landing-demo-card">
+          <span>Líquido após gastos</span>
+          <strong class="valor-liquido-apos-gastos">R$ 25.217,16</strong>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn-google landing-cta" data-scroll-to-login>Começar agora</button>
+  </section>
 
   <!-- Card "Baixe o app" — aparece também na tela de login, sem popup invasivo -->
   <div class="download-card" id="downloadCard">
@@ -176,10 +224,16 @@
         <span class="kpi-label">Valor bruto</span>
         <span class="kpi-value valor-bruto" id="kpiBruto">R$ 0,00</span>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card kpi-gauge-card">
         <span class="kpi-icon">📊</span>
         <span class="kpi-label">Percentual médio</span>
-        <span class="kpi-value valor-percentual" id="kpiPercentual">0%</span>
+        <div class="kpi-gauge">
+          <svg viewBox="0 0 64 64" class="kpi-gauge-svg" aria-hidden="true">
+            <circle cx="32" cy="32" r="27" class="kpi-gauge-track"/>
+            <circle cx="32" cy="32" r="27" class="kpi-gauge-fill" id="gaugePercentual"/>
+          </svg>
+          <span class="kpi-value valor-percentual kpi-gauge-value" id="kpiPercentual">0%</span>
+        </div>
       </div>
       <div class="kpi-card">
         <span class="kpi-icon">⛽</span>
@@ -255,12 +309,30 @@
     <!-- Detalhamento de gastos -->
     <h2 class="section-title">Detalhamento de gastos</h2>
     <div class="gastos-grid">
-      <div class="gasto-item"><span>⛽ Diesel</span><strong id="gastoDiesel" class="valor-gastos">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🛣️ Pedágio</span><strong id="gastoPedagio" class="valor-gastos">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🍽️ Alimentação</span><strong id="gastoAlimentacao" class="valor-gastos">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🅿️ Estacionamento</span><strong id="gastoEstacionamento" class="valor-gastos">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>📎 Outros</span><strong id="gastoOutros" class="valor-gastos">R$ 0,00</strong></div>
-      <div class="gasto-item"><span>🧑‍🤝‍🧑 Ajudante</span><strong id="gastoAjudante" class="valor-gastos">R$ 0,00</strong></div>
+      <div class="gasto-item">
+        <span>⛽ Diesel</span><strong id="gastoDiesel" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarDiesel"></div></div>
+      </div>
+      <div class="gasto-item">
+        <span>🛣️ Pedágio</span><strong id="gastoPedagio" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarPedagio"></div></div>
+      </div>
+      <div class="gasto-item">
+        <span>🍽️ Alimentação</span><strong id="gastoAlimentacao" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarAlimentacao"></div></div>
+      </div>
+      <div class="gasto-item">
+        <span>🅿️ Estacionamento</span><strong id="gastoEstacionamento" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarEstacionamento"></div></div>
+      </div>
+      <div class="gasto-item">
+        <span>📎 Outros</span><strong id="gastoOutros" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarOutros"></div></div>
+      </div>
+      <div class="gasto-item">
+        <span>🧑‍🤝‍🧑 Ajudante</span><strong id="gastoAjudante" class="valor-gastos">R$ 0,00</strong>
+        <div class="gasto-bar-track"><div class="gasto-bar-fill" id="gastoBarAjudante"></div></div>
+      </div>
       <div class="gasto-item gasto-item-destaque"><span>Total de gastos</span><strong id="gastoTotalDetalhe" class="valor-gastos">R$ 0,00</strong></div>
     </div>
 
